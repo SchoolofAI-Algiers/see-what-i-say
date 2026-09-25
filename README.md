@@ -1,8 +1,10 @@
 # Stark Vision : see-what-i-say
-STARK VISION technical project for SoAI welcome day 26/27 season : 
+
+STARK VISION technical project for SoAI welcome day 26/27 season :
+
 Real-time speech-guided referring video segmentation
+
 **Mentors:** Rayan Ouali, Hibatallah Khadir
----
 
 ## Overview
 
@@ -56,58 +58,58 @@ stark_vision/
 ├── .gitignore
 │
 ├── configs/
-│   ├── default.yaml                # thresholds, FPS targets, effect defaults
-│   └── model_paths.yaml            # checkpoint paths, model variant selection
+│   ├── default.yaml               
+│   └── model_paths.yaml            
 │
 ├── checkpoints/
-│   └── README.md                   # download instructions only — no weights in git
+│   └── README.md                   
 │
 ├── scripts/
 │   ├── download_models.sh
-│   ├── run_demo.py                 # single entry point for the live demo
-│   └── benchmark.py                # FPS / latency measurement harness
+│   ├── run_demo.py                 # entry point for demo
+│   └── benchmark.py               
 │
 ├── src/stark_vision/
-│   ├── main.py                     # wires command loop + vision loop together
+│   ├── main.py                     
 │   │
 │   ├── camera/
 │   │   └── capture.py
 │   │
-│   ├── speech/                     # Audio / Interaction
+│   ├── speech/                    
 │   │   ├── recorder.py
 │   │   ├── stt.py
 │   │   └── command_parser.py
 │   │
-│   ├── grounding/                  # Vision / Models
+│   ├── grounding/                  
 │   │   └── grounder.py
 │   │
-│   ├── segmentation/               # Vision / Models
+│   ├── segmentation/              
 │   │   ├── sam2_wrapper.py
 │   │   └── tracker.py
 │   │
-│   ├── target/                     # Systems / State
+│   ├── target/                     
 │   │   ├── target_state.py
 │   │   ├── target_manager.py
 │   │   └── state_machine.py
 │   │
-│   ├── effects/                    # Rendering / HUD
+│   ├── effects/                   
 │   │   ├── base_effect.py
 │   │   ├── highlight.py
 │   │   ├── recolor.py
 │   │   ├── blur.py
 │   │   └── isolate.py
 │   │
-│   ├── hud/                        # Rendering / HUD
+│   ├── hud/                        
 │   │   └── overlay.py
 │   │
 │   ├── geometry/
-│   │   └── coords.py               # the one model <-> camera <-> display mapping
+│   │   └── coords.py              
 │   │
 │   └── utils/
 │       ├── logging_setup.py
 │       └── perf.py
 │
-├── tests/                          # QA / Performance
+├── tests/                          
 │   ├── unit/
 │   ├── integration/
 │   └── data/sample_frames/
@@ -117,25 +119,9 @@ stark_vision/
 │   ├── setup.md
 │   └── demo_script.md
 │
-└── notebooks/                      # exploration only, never imported by src/
-    └── 00_sanity_checks.ipynb
+└── notebooks/                      
+    └── test.ipynb  #if anything was done in a notebooj
 ```
-
----
-
-## Getting Started
-
-```bash
-git clone <repo-url>
-cd stark_vision
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-bash scripts/download_models.sh
-python scripts/run_demo.py
-```
-
----
-
 ## Operator Controls
 The interface of this project
 | Key | Action |
@@ -147,15 +133,6 @@ The interface of this project
 | `C` | clear all |
 | `ESC` | emergency stop |
 
----
-
-## Team Workflow
-
-- **Two-week build**, vertical milestones — a working end-to-end pipeline first, polish after.
-- **Non-negotiable milestone (Day 5):** voice prompt → grounded target → live tracked mask, working end to end. If this isn't working, all new features pause until it is.
-- See `docs/demo_script.md` for the scripted welcome-day showcase.
-
----
 
 ## References
 
