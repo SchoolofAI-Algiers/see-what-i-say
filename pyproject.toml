@@ -1,0 +1,33 @@
+[project]
+name = "stark-vision"
+version = "0.1.0"
+description = "STARK VISION: Real-Time Speech-Guided Referring Video Segmentation"
+readme = "README.md"
+authors = [
+    { name = "Hamza HATTAB", email = "hhamzariadh@gmail.com" },
+]
+requires-python = ">=3.11"
+dependencies = [
+    "torch>=2.14.0",
+    "torchvision>=0.29.0",
+    "transformers>=5.17.0",
+    "pillow>=12.0.0",
+    "opencv-python>=4.10.0",
+    "numpy>=2.0.0",
+    "pyyaml>=6.0.0",
+    "pydantic>=2.10.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0.0"]
+build-backend = "setuptools.build_meta"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0",
+    "ruff>=0.16.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
