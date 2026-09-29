@@ -58,4 +58,6 @@ test_output/
 tests/data/sample_frames/*.jpg
 tests/data/sample_frames/*.png
 !tests/data/sample_frames/.gitkeep
+docs/*chat_history*
+
 
