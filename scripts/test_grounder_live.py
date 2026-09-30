@@ -316,6 +316,12 @@ def main() -> None:
         description="STARK VISION — Live Grounding Engine Smoke Test Runner"
     )
     parser.add_argument(
+        "--model",
+        type=str,
+        default="IDEA-Research/grounding-dino-base",
+        help="Grounding DINO model ID (default: IDEA-Research/grounding-dino-base)",
+    )
+    parser.add_argument(
         "--prompt",
         type=str,
         default="person",
@@ -341,8 +347,9 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    logger.info("Initializing STARK VISION Grounder on RTX 4060 GPU...")
+    logger.info("Initializing STARK VISION Grounder on model: %s...", args.model)
     grounder = Grounder(
+        model_id=args.model,
         box_threshold=args.box_threshold,
         text_threshold=args.text_threshold,
     )
@@ -354,6 +361,7 @@ def main() -> None:
         box_threshold=args.box_threshold,
         text_threshold=args.text_threshold,
     )
+
 
 
 if __name__ == "__main__":
