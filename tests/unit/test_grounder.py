@@ -32,10 +32,13 @@ def test_grounding_candidate_geometry():
 
 
 def test_normalize_prompt():
-    """Verify text query period normalization."""
+    """Verify text query period normalization and edge cases."""
     assert Grounder._normalize_prompt("person wearing red") == "person wearing red ."
     assert Grounder._normalize_prompt("person wearing red .") == "person wearing red ."
+    assert Grounder._normalize_prompt("  TV BOX  ") == "tv box ."
+    assert Grounder._normalize_prompt("tv, box") == "tv . box ."
     assert Grounder._normalize_prompt("   ") == "."
+
 
 
 def test_find_candidates_synthetic_frame(grounder: Grounder):

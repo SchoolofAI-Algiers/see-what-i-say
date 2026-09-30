@@ -82,8 +82,8 @@ class Grounder:
         self,
         model_id: str = "IDEA-Research/grounding-dino-tiny",
         device: str | None = None,
-        box_threshold: float = 0.30,
-        text_threshold: float = 0.25,
+        box_threshold: float = 0.25,
+        text_threshold: float = 0.20,
     ) -> None:
         """
         Initialize the Grounder engine.
@@ -118,14 +118,33 @@ class Grounder:
     @staticmethod
     def _normalize_prompt(text: str) -> str:
         """
-        Ensure text query ends with a period as required by Grounding DINO tokenizer.
+        Normalize text query for Grounding DINO tokenizer across all edge cases.
+
+        Handles:
+        - Case insensitivity (lowercasing)
+        - Removing leading/trailing punctuation and redundant spaces
+        - Splitting comma/semicolon/slash separated expressions into period-separated phrases
+        - Ensuring every distinct sub-phrase ends with a trailing '.'
         """
-        cleaned = text.strip()
+        import re
+
+        cleaned = text.strip().lower()
         if not cleaned:
             return "."
-        if not cleaned.endswith("."):
-            cleaned += " ."
-        return cleaned
+
+        # Replace separators (comma, semicolon, slash, pipe) with period delimiter
+        cleaned = re.sub(r"[,;/|]+", " . ", cleaned)
+
+        # Normalize multiple spaces
+        cleaned = re.sub(r"\s+", " ", cleaned).strip()
+
+        # Split on existing periods and reconstruct clean dot-separated phrases
+        phrases = [p.strip() for p in cleaned.split(".") if p.strip()]
+        if not phrases:
+            return "."
+
+        # Append trailing dot to every phrase as required by Grounding DINO BERT tokenizer
+        return " . ".join(phrases) + " ."
 
     def find_candidates(
         self,
@@ -139,7 +158,7 @@ class Grounder:
 
         Args:
             frame_bgr: OpenCV image array in BGR format (H, W, 3).
-            text_prompt: Natural language query (e.g., "guy wearing red shirt").
+            text_prompt: Natural language query (e.g., "guy wearing red shirt", "tv box").
             box_threshold: Optional override for box confidence threshold.
             text_threshold: Optional override for text alignment threshold.
 
@@ -149,6 +168,10 @@ class Grounder:
         if frame_bgr is None or frame_bgr.size == 0:
             raise ValueError("Input frame_bgr cannot be None or empty.")
 
+        if not text_prompt or not text_prompt.strip():
+            logger.debug("Empty text prompt provided; returning 0 candidates.")
+            return []
+
         query = self._normalize_prompt(text_prompt)
         b_thresh = box_threshold if box_threshold is not None else self.box_threshold
         t_thresh = text_threshold if text_threshold is not None else self.text_threshold
@@ -156,6 +179,7 @@ class Grounder:
         h, w = frame_bgr.shape[:2]
         frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         pil_image = Image.fromarray(frame_rgb)
+
 
         inputs = self.processor(
             images=pil_image, text=query, return_tensors="pt"

@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
 """
-STARK VISION — Live Grounding Engine Smoke Test Runner.
+STARK VISION — Live Interactive Grounding Engine Runner.
 
-Demonstrates open-vocabulary referring expression grounding on live webcam
-or static image files using Grounding DINO.
+Features 100% on-screen interactive HUD text input directly within the OpenCV
+window (no terminal freezing), real-time threshold tuning, dynamic box clearing,
+and sci-fi reticle overlay.
 
-Usage:
-    # 1. Run live on laptop webcam:
-    uv run python scripts/test_grounder_live.py
-
-    # 2. Run with custom initial prompt:
-    uv run python scripts/test_grounder_live.py --prompt "cell phone"
-
-    # 3. Run on a static test image:
-    uv run python scripts/test_grounder_live.py --image path/to/image.jpg
-
-Controls (Webcam Mode):
-    SPACE : Trigger Grounding DINO on current frame
-    P     : Change text prompt in terminal
-    S     : Save current annotated snapshot
-    Q/ESC : Exit
+Controls (All inside the OpenCV Window):
+    Type any text       : Updates search query live on-screen
+    BACKSPACE           : Delete character
+    ENTER or SPACE      : Ground current frame with search query
+    C                   : Clear prompt and clear all detections
+    + / UP ARROW        : Increase detection threshold (less sensitive)
+    - / DOWN ARROW      : Decrease detection threshold (more sensitive / faint targets)
+    S                   : Save annotated frame snapshot
+    ESC                 : Quit application
 """
 
 from __future__ import annotations
@@ -53,38 +48,46 @@ def draw_hud_box(
     thickness: int = 2,
 ) -> None:
     """
-    Draw a sci-fi HUD-style bounding box and telemetry label on the frame.
+    Draw a sci-fi HUD reticle bounding box and telemetry label.
     """
-    x1, y1, x2, y2 = int(candidate.x1), int(candidate.y1), int(candidate.x2), int(candidate.y2)
+    h, w = frame.shape[:2]
+    x1 = max(0, min(w - 1, int(candidate.x1)))
+    y1 = max(0, min(h - 1, int(candidate.y1)))
+    x2 = max(0, min(w - 1, int(candidate.x2)))
+    y2 = max(0, min(h - 1, int(candidate.y2)))
 
-    # 1. Main bounding rectangle
+    if x2 <= x1 or y2 <= y1:
+        return
+
+    # 1. Main bounding box
     cv2.rectangle(frame, (x1, y1), (x2, y2), color, thickness)
 
-    # 2. Corner reticle brackets (Iron Man style)
-    corner_len = min(20, max(5, int((x2 - x1) * 0.15)))
-    # Top-left
+    # 2. Corner reticle brackets
+    corner_len = min(22, max(6, int((x2 - x1) * 0.15)))
     cv2.line(frame, (x1, y1), (x1 + corner_len, y1), color, thickness + 2)
     cv2.line(frame, (x1, y1), (x1, y1 + corner_len), color, thickness + 2)
-    # Top-right
     cv2.line(frame, (x2, y1), (x2 - corner_len, y1), color, thickness + 2)
     cv2.line(frame, (x2, y1), (x2, y1 + corner_len), color, thickness + 2)
-    # Bottom-left
     cv2.line(frame, (x1, y2), (x1 + corner_len, y2), color, thickness + 2)
     cv2.line(frame, (x1, y2), (x1, y2 - corner_len), color, thickness + 2)
-    # Bottom-right
     cv2.line(frame, (x2, y2), (x2 - corner_len, y2), color, thickness + 2)
     cv2.line(frame, (x2, y2), (x2, y2 - corner_len), color, thickness + 2)
 
-    # 3. Telemetry badge
+    # 3. Target center reticle
+    cx, cy = int(candidate.center[0]), int(candidate.center[1])
+    if 0 <= cx < w and 0 <= cy < h:
+        cv2.drawMarker(frame, (cx, cy), color, cv2.MARKER_CROSS, 12, 1)
+
+    # 4. Telemetry badge
     label_text = f"#{index} {candidate.label} [{candidate.score * 100:.1f}%]"
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 0.55
+    font_scale = 0.50
     text_thickness = 1
     (tw, th), baseline = cv2.getTextSize(label_text, font, font_scale, text_thickness)
 
     badge_y1 = max(0, y1 - th - baseline - 8)
     badge_y2 = y1
-    cv2.rectangle(frame, (x1, badge_y1), (x1 + tw + 10, badge_y2), (20, 20, 20), -1)
+    cv2.rectangle(frame, (x1, badge_y1), (x1 + tw + 10, badge_y2), (18, 18, 18), -1)
     cv2.rectangle(frame, (x1, badge_y1), (x1 + tw + 10, badge_y2), color, 1)
     cv2.putText(
         frame,
@@ -98,129 +101,72 @@ def draw_hud_box(
     )
 
 
-def draw_hud_header(
+def draw_hud_dashboard(
     frame: np.ndarray,
-    prompt: str,
+    search_buffer: str,
+    active_prompt: str,
     latency_ms: float,
     num_candidates: int,
     ambiguous: bool,
-    fps: float = 0.0,
+    box_threshold: float,
+    fps: float,
+    status_msg: str,
 ) -> None:
     """
-    Draw the top HUD telemetry dashboard banner.
+    Render top telemetry strip and bottom on-screen interactive input search bar.
     """
     h, w = frame.shape[:2]
-    # Header background strip
-    overlay = frame.copy()
-    cv2.rectangle(overlay, (0, 0), (w, 55), (15, 15, 15), -1)
-    cv2.addWeighted(overlay, 0.75, frame, 0.25, 0, frame)
-
     font = cv2.FONT_HERSHEY_SIMPLEX
-    # Title & Prompt
+
+    # Top Telemetry Header
+    header = frame.copy()
+    cv2.rectangle(header, (0, 0), (w, 55), (15, 15, 15), -1)
+    cv2.addWeighted(header, 0.75, frame, 0.25, 0, frame)
+
+    cv2.putText(frame, "STARK VISION // GROUNDING ENGINE", (15, 22), font, 0.52, (0, 220, 255), 1, cv2.LINE_AA)
+    thresh_color = (0, 255, 200) if box_threshold <= 0.25 else (200, 200, 200)
     cv2.putText(
         frame,
-        f"STARK VISION // GROUNDING ENGINE",
-        (15, 22),
-        font,
-        0.55,
-        (0, 220, 255),
-        1,
-        cv2.LINE_AA,
-    )
-    cv2.putText(
-        frame,
-        f"QUERY: '{prompt}'",
+        f"LOCKED TARGET: '{active_prompt}'  |  THRESH: {box_threshold:.2f} (+/- to tune)",
         (15, 44),
         font,
-        0.50,
-        (255, 255, 255),
+        0.44,
+        thresh_color,
         1,
         cv2.LINE_AA,
     )
 
-    # Telemetry metrics
+    info_str = f"Targets: {num_candidates} | Latency: {latency_ms:.1f}ms | FPS: {fps:.1f}"
+    (tw, _), _ = cv2.getTextSize(info_str, font, 0.44, 1)
     status_color = (0, 255, 128) if num_candidates > 0 else (120, 120, 120)
-    info_str = f"Found: {num_candidates} | Latency: {latency_ms:.1f}ms | FPS: {fps:.1f}"
-    (tw, _), _ = cv2.getTextSize(info_str, font, 0.45, 1)
-    cv2.putText(
-        frame,
-        info_str,
-        (w - tw - 15, 25),
-        font,
-        0.45,
-        status_color,
-        1,
-        cv2.LINE_AA,
-    )
+    cv2.putText(frame, info_str, (w - tw - 15, 24), font, 0.44, status_color, 1, cv2.LINE_AA)
 
     if ambiguous:
         ambig_str = "! AMBIGUOUS TARGETS (Score delta < 0.15) !"
-        (aw, _), _ = cv2.getTextSize(ambig_str, font, 0.45, 1)
-        cv2.putText(
-            frame,
-            ambig_str,
-            (w - aw - 15, 45),
-            font,
-            0.45,
-            (0, 165, 255),
-            1,
-            cv2.LINE_AA,
-        )
+        (aw, _), _ = cv2.getTextSize(ambig_str, font, 0.44, 1)
+        cv2.putText(frame, ambig_str, (w - aw - 15, 45), font, 0.44, (0, 165, 255), 1, cv2.LINE_AA)
 
+    # Bottom Search & Input Bar (Interactive on-screen HUD)
+    bar_h = 60
+    footer = frame.copy()
+    cv2.rectangle(footer, (0, h - bar_h), (w, h), (12, 12, 12), -1)
+    cv2.addWeighted(footer, 0.85, frame, 0.15, 0, frame)
 
-def run_on_image(
-    grounder: Grounder,
-    image_path: str,
-    prompt: str,
-    box_threshold: float,
-    text_threshold: float,
-    output_path: str | None = None,
-) -> None:
-    """
-    Run Grounding on a single static image file and display/save result.
-    """
-    frame = cv2.imread(image_path)
-    if frame is None:
-        logger.error("Could not load image from %s", image_path)
-        return
+    # Search bar outline
+    cursor_char = "_" if int(time.time() * 2) % 2 == 0 else " "
+    search_display = f"> SEARCH: {search_buffer}{cursor_char}"
+    cv2.rectangle(frame, (10, h - bar_h + 8), (w - 10, h - 28), (40, 40, 40), -1)
+    cv2.rectangle(frame, (10, h - bar_h + 8), (w - 10, h - 28), (0, 220, 255), 1)
 
-    logger.info("Grounding prompt '%s' on image %s...", prompt, image_path)
-    t0 = time.perf_counter()
-    candidates = grounder.find(
-        frame_bgr=frame,
-        text_prompt=prompt,
-        box_threshold=box_threshold,
-        text_threshold=text_threshold,
-    )
-    latency_ms = (time.perf_counter() - t0) * 1000
+    cv2.putText(frame, search_display, (20, h - bar_h + 28), font, 0.52, (255, 255, 255), 1, cv2.LINE_AA)
 
-    ambiguous = is_ambiguous(candidates)
-    logger.info(
-        "Detected %d candidates in %.1f ms (Ambiguous: %s)",
-        len(candidates),
-        latency_ms,
-        ambiguous,
-    )
+    # Hotkey hints line
+    hint_text = "Type to edit search  |  [ENTER/SPACE] Ground  |  [C] Clear Detections  |  [+/-] Sensitivity  |  [ESC] Exit"
+    cv2.putText(frame, hint_text, (15, h - 10), font, 0.38, (180, 180, 180), 1, cv2.LINE_AA)
 
-    annotated = frame.copy()
-    for idx, cand in enumerate(candidates):
-        color = (0, 255, 128) if idx == 0 else (255, 180, 0)
-        draw_hud_box(annotated, cand, idx + 1, color=color)
-
-    draw_hud_header(annotated, prompt, latency_ms, len(candidates), ambiguous)
-
-    save_path = output_path or "grounding_result.jpg"
-    cv2.imwrite(save_path, annotated)
-    logger.info("Saved annotated result to %s", save_path)
-
-    # Attempt GUI display if display server available
-    try:
-        cv2.imshow("STARK VISION — Static Grounding Test", annotated)
-        logger.info("Press any key in the image window to close.")
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
-    except cv2.error:
-        logger.info("Headless environment: display skipped, result saved to %s", save_path)
+    if status_msg:
+        (sw, _), _ = cv2.getTextSize(status_msg, font, 0.42, 1)
+        cv2.putText(frame, status_msg, (w - sw - 20, h - bar_h + 28), font, 0.42, (0, 200, 255), 1, cv2.LINE_AA)
 
 
 def run_on_webcam(
@@ -229,109 +175,135 @@ def run_on_webcam(
     initial_prompt: str,
     box_threshold: float,
     text_threshold: float,
-    continuous: bool = False,
 ) -> None:
     """
-    Run live interactive grounding on the webcam stream.
+    Run interactive real-time grounding on webcam with direct on-screen keyboard input.
     """
-    logger.info("Opening camera device %d...", camera_id)
+    logger.info("Connecting to camera device %d...", camera_id)
     cap = cv2.VideoCapture(camera_id)
     if not cap.isOpened():
-        logger.error("Failed to open camera device %d. Check permissions or /dev/video*.", camera_id)
+        logger.error("Failed to open camera %d. Check /dev/video* permissions.", camera_id)
         return
 
-    prompt = initial_prompt
-    logger.info("Webcam online. Controls: [SPACE] Ground | [P] Change Prompt | [S] Save | [Q] Quit")
+    active_prompt = initial_prompt
+    search_buffer = initial_prompt
+    b_thresh = box_threshold
+    t_thresh = text_threshold
 
     candidates: list[GroundingCandidate] = []
     last_latency_ms = 0.0
     ambiguous = False
     prev_time = time.perf_counter()
     fps = 0.0
+    status_msg = "Ready"
 
-    # Run initial grounding on startup
+    window_name = "STARK VISION — Interactive Grounding Engine"
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+
+    # Initial acquisition
     ret, frame = cap.read()
-    if ret:
+    if ret and active_prompt:
         t0 = time.perf_counter()
-        candidates = grounder.find(frame, prompt, box_threshold, text_threshold)
+        candidates = grounder.find(frame, active_prompt, b_thresh, t_thresh)
         last_latency_ms = (time.perf_counter() - t0) * 1000
         ambiguous = is_ambiguous(candidates)
 
-    window_name = "STARK VISION — Live Grounding Engine"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    logger.info("Interactive HUD ready. Type directly inside the OpenCV window.")
 
     try:
         while True:
             ret, frame = cap.read()
             if not ret:
-                logger.warning("Frame read failed. Retrying...")
-                time.sleep(0.03)
+                time.sleep(0.02)
                 continue
 
             now = time.perf_counter()
             fps = 0.9 * fps + 0.1 * (1.0 / max(1e-5, now - prev_time))
             prev_time = now
 
-            if continuous:
-                t0 = time.perf_counter()
-                candidates = grounder.find(frame, prompt, box_threshold, text_threshold)
-                last_latency_ms = (time.perf_counter() - t0) * 1000
-                ambiguous = is_ambiguous(candidates)
-
-            # Render HUD
             display_frame = frame.copy()
+
+            # Render detected objects
             for idx, cand in enumerate(candidates):
                 color = (0, 255, 128) if idx == 0 else (255, 180, 0)
                 draw_hud_box(display_frame, cand, idx + 1, color=color)
 
-            draw_hud_header(display_frame, prompt, last_latency_ms, len(candidates), ambiguous, fps=fps)
-
-            # Instructions footer
-            footer_text = "[SPACE] Ground Now  |  [P] Change Prompt  |  [S] Save Frame  |  [Q] Exit"
-            cv2.putText(
+            # Render Dashboard and on-screen search bar
+            draw_hud_dashboard(
                 display_frame,
-                footer_text,
-                (15, display_frame.shape[0] - 15),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.42,
-                (200, 200, 200),
-                1,
-                cv2.LINE_AA,
+                search_buffer=search_buffer,
+                active_prompt=active_prompt,
+                latency_ms=last_latency_ms,
+                num_candidates=len(candidates),
+                ambiguous=ambiguous,
+                box_threshold=b_thresh,
+                fps=fps,
+                status_msg=status_msg,
             )
 
             cv2.imshow(window_name, display_frame)
-            key = cv2.waitKey(1) & 0xFF
 
-            if key in (ord("q"), ord("Q"), 27):  # Q or ESC
+            # Handle Keystrokes inside OpenCV Window (NO terminal input!)
+            key = cv2.waitKey(1)
+            if key == -1:
+                continue
+
+            key_code = key & 0xFF
+
+            # 1. Exit on ESC or 'q' if search buffer is empty
+            if key_code == 27:  # ESC
                 break
-            elif key == ord(" "):  # SPACE: trigger manual grounding
-                logger.info("Grounding frame against prompt: '%s'...", prompt)
-                t0 = time.perf_counter()
-                candidates = grounder.find(frame, prompt, box_threshold, text_threshold)
-                last_latency_ms = (time.perf_counter() - t0) * 1000
-                ambiguous = is_ambiguous(candidates)
-                logger.info(
-                    "Result: %d candidates in %.1f ms (Ambiguous: %s)",
-                    len(candidates),
-                    last_latency_ms,
-                    ambiguous,
-                )
-            elif key in (ord("p"), ord("P")):  # P: prompt change
-                logger.info("Current prompt: '%s'", prompt)
-                new_prompt = input("\nEnter new referring expression: ").strip()
-                if new_prompt:
-                    prompt = new_prompt
-                    logger.info("Prompt updated to: '%s'. Re-grounding...", prompt)
+            elif key_code in (ord("q"), ord("Q")) and not search_buffer:
+                break
+
+            # 2. Enter: Trigger Grounding with search buffer
+            elif key_code in (13, 10):  # ENTER
+                active_prompt = search_buffer.strip()
+                if active_prompt:
+                    status_msg = f"Scanning '{active_prompt}'..."
+                    logger.info("Grounding frame against prompt: '%s' (thresh: %.2f)...", active_prompt, b_thresh)
                     t0 = time.perf_counter()
-                    candidates = grounder.find(frame, prompt, box_threshold, text_threshold)
+                    candidates = grounder.find(frame, active_prompt, b_thresh, t_thresh)
                     last_latency_ms = (time.perf_counter() - t0) * 1000
                     ambiguous = is_ambiguous(candidates)
-            elif key in (ord("s"), ord("S")):  # S: save snapshot
-                save_dir = Path("tests/data/sample_frames")
-                save_dir.mkdir(parents=True, exist_ok=True)
-                save_path = save_dir / f"grounding_snapshot_{int(time.time())}.jpg"
-                cv2.imwrite(str(save_path), display_frame)
-                logger.info("Snapshot saved to %s", save_path)
+                    status_msg = f"Found {len(candidates)}" if candidates else "0 Targets Found"
+                else:
+                    candidates = []
+                    status_msg = "Cleared"
+
+            # 3. Backspace: delete character from search buffer
+            elif key_code in (8, 127, 255):  # BACKSPACE
+                if search_buffer:
+                    search_buffer = search_buffer[:-1]
+
+            # 4. 'C' or 'c': Clear detections and search buffer
+            elif key_code in (ord("c"), ord("C")) and len(search_buffer) == 0:
+                candidates = []
+                status_msg = "All Detections Cleared"
+
+            # 5. Sensitivity threshold tuning (+ / - or UP / DOWN)
+            elif key_code in (ord("+"), ord("=")):
+                b_thresh = min(0.90, round(b_thresh + 0.05, 2))
+                status_msg = f"Thresh: {b_thresh:.2f}"
+            elif key_code in (ord("-"), ord("_")):
+                b_thresh = max(0.10, round(b_thresh - 0.05, 2))
+                status_msg = f"Thresh: {b_thresh:.2f}"
+
+            # 6. Space: If buffer is empty, re-ground; if typing, add space
+            elif key_code == 32:  # SPACE
+                if not search_buffer:
+                    if active_prompt:
+                        t0 = time.perf_counter()
+                        candidates = grounder.find(frame, active_prompt, b_thresh, t_thresh)
+                        last_latency_ms = (time.perf_counter() - t0) * 1000
+                        ambiguous = is_ambiguous(candidates)
+                        status_msg = f"Found {len(candidates)}" if candidates else "0 Targets Found"
+                else:
+                    search_buffer += " "
+
+            # 7. Printable characters (a-z, A-Z, 0-9, punctuation)
+            elif 32 < key_code <= 126:
+                search_buffer += chr(key_code)
 
     finally:
         cap.release()
@@ -356,33 +328,16 @@ def main() -> None:
         help="OpenCV camera device index (default: 0)",
     )
     parser.add_argument(
-        "--image",
-        type=str,
-        default=None,
-        help="Optional path to static image file to test instead of webcam",
-    )
-    parser.add_argument(
         "--box-threshold",
         type=float,
-        default=0.30,
-        help="Bounding box presence threshold (default: 0.30)",
+        default=0.25,
+        help="Bounding box presence threshold (default: 0.25)",
     )
     parser.add_argument(
         "--text-threshold",
         type=float,
-        default=0.25,
-        help="Text-visual alignment threshold (default: 0.25)",
-    )
-    parser.add_argument(
-        "--continuous",
-        action="store_true",
-        help="Run grounding continuously every frame (simulates single-loop bottleneck)",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=None,
-        help="Output path for saving static image result",
+        default=0.20,
+        help="Text-visual alignment threshold (default: 0.20)",
     )
     args = parser.parse_args()
 
@@ -392,24 +347,13 @@ def main() -> None:
         text_threshold=args.text_threshold,
     )
 
-    if args.image:
-        run_on_image(
-            grounder=grounder,
-            image_path=args.image,
-            prompt=args.prompt,
-            box_threshold=args.box_threshold,
-            text_threshold=args.text_threshold,
-            output_path=args.output,
-        )
-    else:
-        run_on_webcam(
-            grounder=grounder,
-            camera_id=args.camera,
-            initial_prompt=args.prompt,
-            box_threshold=args.box_threshold,
-            text_threshold=args.text_threshold,
-            continuous=args.continuous,
-        )
+    run_on_webcam(
+        grounder=grounder,
+        camera_id=args.camera,
+        initial_prompt=args.prompt,
+        box_threshold=args.box_threshold,
+        text_threshold=args.text_threshold,
+    )
 
 
 if __name__ == "__main__":
