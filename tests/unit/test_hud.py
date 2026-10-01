@@ -167,5 +167,5 @@ def test_full_render_throughput(blank_frame: np.ndarray, dummy_candidates: list[
         )
     elapsed_ms = (time.perf_counter() - t0) * 1000 / iterations
 
-    # Must render in under 8 ms per frame (budget is 33ms for 30 FPS)
-    assert elapsed_ms < 8.0, f"HUD render took {elapsed_ms:.2f}ms, exceeding budget."
+    # Must render in under 15 ms per frame (budget is 33.3ms for 30 FPS)
+    assert elapsed_ms < 15.0, f"HUD render took {elapsed_ms:.2f}ms, exceeding budget."

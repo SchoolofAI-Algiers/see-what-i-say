@@ -1,15 +1,17 @@
 """
-STARK VISION — JarvisHUD Engine.
+STARK VISION — JarvisHUD Engine (Mark LXXXV Tactical Augmented Reality).
 
 Provides high-tech Marvel Iron Man / Mark LXXXV tactical augmented reality
-overlays using pure OpenCV (cv2) and NumPy.
+overlays using pure OpenCV (cv2), NumPy, and TrueType Typography (Orbitron & JetBrains Mono).
 
-Includes:
-- Rotating Arc Reactor gyroscopic telemetry gauge
-- Dynamic JARVIS acoustic voice waveform visualizer
-- Tactical target reticles with corner brackets and laser sweep
-- Holographic cyber-chamfered command console dock
-- Diagnostic boot and calibration sequence
+Features:
+- True 3D rotating holographic Arc Reactor gyroscope with depth perspective
+- Floating split aerospace telemetry capsules (no heavy black blocks)
+- TrueType Typography using Orbitron-Bold (Marvel Iron Man font) and JetBrains Mono
+- Intelligent target reticles with adaptive crosshair positioning
+- Multi-pass holographic glow bloom and laser scanline sweeps
+- Floating cyber-chamfered command console dock with on-screen keyboard input
+- 2.5-second cinematic suit diagnostic boot sequence with spoken audio greeting
 """
 
 from __future__ import annotations
@@ -21,14 +23,17 @@ from typing import Sequence
 import cv2
 import numpy as np
 
-# BGR Design Tokens (Iron Man / Arc Reactor Palette)
-ARC_CYAN = (255, 240, 0)         # Primary electric hologram cyan
-PLASMA_BLUE = (255, 144, 30)      # Deep secondary hologram blue
-STARK_GOLD = (0, 191, 255)        # Mark 85 armor gold
-CRIMSON_REPULSOR = (42, 42, 255)  # Alert crimson red
-OBSIDIAN_GLASS = (25, 15, 10)     # Dark translucent backing
-HUD_WHITE = (245, 245, 245)       # High-contrast telemetry text
-HUD_GRAY = (160, 160, 160)        # Subtle secondary text
+from stark_vision.hud.geometry_3d import draw_3d_arc_reactor
+from stark_vision.hud.typography import blit_text
+
+# BGR Design Tokens (Iron Man / Arc Reactor Hologram Palette)
+ARC_CYAN = (255, 240, 0)          # Primary electric hologram cyan
+PLASMA_BLUE = (255, 144, 30)       # Deep secondary hologram blue
+STARK_GOLD = (0, 191, 255)         # Mark 85 armor gold
+CRIMSON_REPULSOR = (42, 42, 255)   # Alert crimson red
+OBSIDIAN_GLASS = (20, 14, 10)      # Dark translucent backing
+HUD_WHITE = (250, 248, 245)        # High-contrast typography
+HUD_GRAY = (160, 160, 160)         # Subtle secondary telemetry
 
 try:
     from stark_vision.speech.jarvis_voice import play_startup_greeting
@@ -71,7 +76,7 @@ class JarvisHUD:
         frame: np.ndarray,
         pt1: tuple[int, int],
         pt2: tuple[int, int],
-        chamfer: int = 15,
+        chamfer: int = 12,
         bg_color: tuple[int, int, int] = OBSIDIAN_GLASS,
         border_color: tuple[int, int, int] = ARC_CYAN,
         alpha: float = 0.75,
@@ -82,7 +87,7 @@ class JarvisHUD:
         """
         x1, y1 = pt1
         x2, y2 = pt2
-        ch = min(chamfer, (x2 - x1) // 3, (y2 - y1) // 3)
+        ch = min(chamfer, max(4, (x2 - x1) // 4), max(4, (y2 - y1) // 4))
 
         pts = np.array(
             [
@@ -107,6 +112,14 @@ class JarvisHUD:
                 frame,
                 [pts],
                 isClosed=True,
+                color=PLASMA_BLUE,
+                thickness=border_thickness + 1,
+                lineType=cv2.LINE_AA,
+            )
+            cv2.polylines(
+                frame,
+                [pts],
+                isClosed=True,
                 color=border_color,
                 thickness=border_thickness,
                 lineType=cv2.LINE_AA,
@@ -116,78 +129,12 @@ class JarvisHUD:
         self,
         frame: np.ndarray,
         center: tuple[int, int],
-        radius: int = 24,
+        radius: float = 24.0,
     ) -> None:
         """
-        Draw animated rotating Arc Reactor concentric rings with radial tick marks.
+        Draw animated rotating 3D Arc Reactor gyroscope.
         """
-        cx, cy = center
-        t = self.frame_count
-
-        # 1. Outer segmented ring (clockwise rotation)
-        angle_cw = (t * 3) % 360
-        cv2.ellipse(
-            frame,
-            (cx, cy),
-            (radius, radius),
-            angle_cw,
-            0,
-            110,
-            STARK_GOLD,
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.ellipse(
-            frame,
-            (cx, cy),
-            (radius, radius),
-            angle_cw + 180,
-            0,
-            110,
-            STARK_GOLD,
-            2,
-            cv2.LINE_AA,
-        )
-
-        # 2. Middle segmented ring (counter-clockwise rotation)
-        angle_ccw = (-t * 4) % 360
-        r_mid = max(8, radius - 6)
-        cv2.ellipse(
-            frame,
-            (cx, cy),
-            (r_mid, r_mid),
-            angle_ccw,
-            20,
-            160,
-            ARC_CYAN,
-            2,
-            cv2.LINE_AA,
-        )
-        cv2.ellipse(
-            frame,
-            (cx, cy),
-            (r_mid, r_mid),
-            angle_ccw + 180,
-            20,
-            160,
-            ARC_CYAN,
-            2,
-            cv2.LINE_AA,
-        )
-
-        # 3. Inner core and center pip
-        r_core = max(4, radius - 14)
-        cv2.circle(frame, (cx, cy), r_core, PLASMA_BLUE, 1, cv2.LINE_AA)
-        cv2.circle(frame, (cx, cy), 3, (255, 255, 255), -1, cv2.LINE_AA)
-
-        # 4. Eight radial tick marks (45 degrees apart)
-        for i in range(8):
-            deg = math.radians(i * 45 + angle_cw)
-            x_in = int(cx + (radius + 2) * math.cos(deg))
-            y_in = int(cy + (radius + 2) * math.sin(deg))
-            x_out = int(cx + (radius + 6) * math.cos(deg))
-            y_out = int(cy + (radius + 6) * math.sin(deg))
-            cv2.line(frame, (x_in, y_in), (x_out, y_out), ARC_CYAN, 1, cv2.LINE_AA)
+        draw_3d_arc_reactor(frame, center=center, frame_count=self.frame_count, base_radius=radius)
 
     def _draw_voice_waveform(
         self,
@@ -196,37 +143,30 @@ class JarvisHUD:
         is_active: bool = False,
     ) -> None:
         """
-        Draw animated acoustic waveform equalizer bars (JARVIS voice pulse).
+        Draw animated acoustic frequency spectrum bars (JARVIS speech wave).
         """
         cx, cy = center
-        num_bars = 11
+        num_bars = 13
         spacing = 5
         bar_w = 3
         max_h = 24 if is_active else 12
-        t = self.frame_count * 0.15
+        t = self.frame_count * 0.16
 
         start_x = cx - ((num_bars * (bar_w + spacing)) // 2)
 
         for i in range(num_bars):
-            # Harmonic sine wave combination
             norm_idx = i - (num_bars // 2)
-            envelope = math.exp(-0.15 * (norm_idx**2))  # Bell curve envelope
-            pulse = math.sin(t + i * 0.7) * math.cos(t * 0.8 + i * 0.3)
+            envelope = math.exp(-0.16 * (norm_idx**2))  # Bell curve
+            pulse = math.sin(t + i * 0.65) * math.cos(t * 0.75 + i * 0.35)
             h = int(6 + abs(pulse) * max_h * envelope)
 
             bx = start_x + i * (bar_w + spacing)
-            color = ARC_CYAN if i % 2 == 0 else PLASMA_BLUE
-            if is_active:
-                color = STARK_GOLD if i == num_bars // 2 else color
+            color = ARC_CYAN if (i % 2 == 0) else PLASMA_BLUE
+            if is_active and abs(norm_idx) <= 1:
+                color = STARK_GOLD
 
-            cv2.line(
-                frame,
-                (bx, cy - h // 2),
-                (bx, cy + h // 2),
-                color,
-                bar_w,
-                cv2.LINE_AA,
-            )
+            cv2.line(frame, (bx, cy - h // 2), (bx, cy + h // 2), PLASMA_BLUE, bar_w + 2, cv2.LINE_AA)
+            cv2.line(frame, (bx, cy - h // 2), (bx, cy + h // 2), color, bar_w, cv2.LINE_AA)
 
     def _draw_target_reticle(
         self,
@@ -237,7 +177,7 @@ class JarvisHUD:
     ) -> None:
         """
         Draw tactical Iron Man target lock reticle, chamfered brackets,
-        sweeping laser scanline, and telemetry badge.
+        sweeping laser scanline, and TrueType telemetry badge.
         """
         h_frame, w_frame = frame.shape[:2]
         x1 = max(0, min(w_frame - 1, int(candidate.x1)))
@@ -245,101 +185,100 @@ class JarvisHUD:
         x2 = max(0, min(w_frame - 1, int(candidate.x2)))
         y2 = max(0, min(h_frame - 1, int(candidate.y2)))
 
-        if x2 <= x1 + 5 or y2 <= y1 + 5:
+        if x2 <= x1 + 8 or y2 <= y1 + 8:
             return
 
         box_w = x2 - x1
         box_h = y2 - y1
+        area_ratio = (box_w * box_h) / (w_frame * h_frame)
+        is_large_target = area_ratio > 0.45
 
-        # 1. Subtle translucent target tint
+        # 1. Subtle Translucent Target Tint
         roi = frame[y1:y2, x1:x2]
         tint = np.full_like(roi, color, dtype=np.uint8)
-        cv2.addWeighted(tint, 0.08, roi, 0.92, 0, roi)
+        tint_alpha = 0.04 if is_large_target else 0.08
+        cv2.addWeighted(tint, tint_alpha, roi, 1.0 - tint_alpha, 0, roi)
 
         # 2. Four Tactical Chamfered L-Brackets
-        bracket_len = min(28, max(8, int(min(box_w, box_h) * 0.20)))
-        thick = 2
+        bracket_len = min(28, max(10, int(min(box_w, box_h) * 0.16)))
 
         # Top-Left Bracket
-        cv2.line(frame, (x1, y1), (x1 + bracket_len, y1), color, thick, cv2.LINE_AA)
-        cv2.line(frame, (x1, y1), (x1, y1 + bracket_len), color, thick, cv2.LINE_AA)
+        cv2.line(frame, (x1, y1), (x1 + bracket_len, y1), color, 2, cv2.LINE_AA)
+        cv2.line(frame, (x1, y1), (x1, y1 + bracket_len), color, 2, cv2.LINE_AA)
         cv2.line(frame, (x1 + 3, y1 + 3), (x1 + bracket_len - 4, y1 + 3), PLASMA_BLUE, 1, cv2.LINE_AA)
+        cv2.line(frame, (x1 + 3, y1 + 3), (x1 + 3, y1 + bracket_len - 4), PLASMA_BLUE, 1, cv2.LINE_AA)
 
         # Top-Right Bracket
-        cv2.line(frame, (x2, y1), (x2 - bracket_len, y1), color, thick, cv2.LINE_AA)
-        cv2.line(frame, (x2, y1), (x2, y1 + bracket_len), color, thick, cv2.LINE_AA)
+        cv2.line(frame, (x2, y1), (x2 - bracket_len, y1), color, 2, cv2.LINE_AA)
+        cv2.line(frame, (x2, y1), (x2, y1 + bracket_len), color, 2, cv2.LINE_AA)
         cv2.line(frame, (x2 - 3, y1 + 3), (x2 - bracket_len + 4, y1 + 3), PLASMA_BLUE, 1, cv2.LINE_AA)
+        cv2.line(frame, (x2 - 3, y1 + 3), (x2 - 3, y1 + bracket_len - 4), PLASMA_BLUE, 1, cv2.LINE_AA)
 
         # Bottom-Left Bracket
-        cv2.line(frame, (x1, y2), (x1 + bracket_len, y2), color, thick, cv2.LINE_AA)
-        cv2.line(frame, (x1, y2), (x1, y2 - bracket_len), color, thick, cv2.LINE_AA)
+        cv2.line(frame, (x1, y2), (x1 + bracket_len, y2), color, 2, cv2.LINE_AA)
+        cv2.line(frame, (x1, y2), (x1, y2 - bracket_len), color, 2, cv2.LINE_AA)
         cv2.line(frame, (x1 + 3, y2 - 3), (x1 + bracket_len - 4, y2 - 3), PLASMA_BLUE, 1, cv2.LINE_AA)
+        cv2.line(frame, (x1 + 3, y2 - 3), (x1 + 3, y2 - bracket_len + 4), PLASMA_BLUE, 1, cv2.LINE_AA)
 
         # Bottom-Right Bracket
-        cv2.line(frame, (x2, y2), (x2 - bracket_len, y2), color, thick, cv2.LINE_AA)
-        cv2.line(frame, (x2, y2), (x2, y2 - bracket_len), color, thick, cv2.LINE_AA)
+        cv2.line(frame, (x2, y2), (x2 - bracket_len, y2), color, 2, cv2.LINE_AA)
+        cv2.line(frame, (x2, y2), (x2, y2 - bracket_len), color, 2, cv2.LINE_AA)
         cv2.line(frame, (x2 - 3, y2 - 3), (x2 - bracket_len + 4, y2 - 3), PLASMA_BLUE, 1, cv2.LINE_AA)
+        cv2.line(frame, (x2 - 3, y2 - 3), (x2 - 3, y2 - bracket_len + 4), PLASMA_BLUE, 1, cv2.LINE_AA)
 
-        # 3. Center Target Lock Reticle
+        # 3. Center Target Lock Reticle (Only for focused objects, not full-room walls)
         cx, cy = int(candidate.center[0]), int(candidate.center[1])
-        if 0 <= cx < w_frame and 0 <= cy < h_frame:
-            cv2.circle(frame, (cx, cy), 6, color, 1, cv2.LINE_AA)
-            cv2.line(frame, (cx - 10, cy), (cx + 10, cy), color, 1, cv2.LINE_AA)
-            cv2.line(frame, (cx, cy - 10), (cx, cy + 10), color, 1, cv2.LINE_AA)
+        if not is_large_target and 0 <= cx < w_frame and 0 <= cy < h_frame:
+            cv2.circle(frame, (cx, cy), 8, color, 1, cv2.LINE_AA)
+            cv2.circle(frame, (cx, cy), 3, HUD_WHITE, -1, cv2.LINE_AA)
+            cv2.line(frame, (cx - 12, cy), (cx - 4, cy), color, 1, cv2.LINE_AA)
+            cv2.line(frame, (cx + 4, cy), (cx + 12, cy), color, 1, cv2.LINE_AA)
+            cv2.line(frame, (cx, cy - 12), (cx, cy - 4), color, 1, cv2.LINE_AA)
+            cv2.line(frame, (cx, cy + 4), (cx, cy + 12), color, 1, cv2.LINE_AA)
 
         # 4. Animated Scanning Laser Sweep Line
-        scan_progress = ((self.frame_count * 3) % 100) / 100.0
+        scan_progress = ((self.frame_count * 2.5) % 100) / 100.0
         scan_y = int(y1 + scan_progress * box_h)
-        cv2.line(frame, (x1 + 4, scan_y), (x2 - 4, scan_y), ARC_CYAN, 1, cv2.LINE_AA)
+        cv2.line(frame, (x1 + 6, scan_y), (x2 - 6, scan_y), ARC_CYAN, 1, cv2.LINE_AA)
 
-        # 5. Tactical Telemetry Badge
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        label_text = f"TARGET #{index} // {candidate.label.upper()} [{candidate.score * 100:.1f}%]"
-        # Estimated distance based on vertical fraction
-        dist_est = max(0.5, round(2.2 * (480 / max(1, box_h)), 1))
-        sub_text = f"LOCK: ACQUIRED | RANGE: ~{dist_est}m"
-
-        (tw1, th1), _ = cv2.getTextSize(label_text, font, 0.44, 1)
-        (tw2, th2), _ = cv2.getTextSize(sub_text, font, 0.36, 1)
-        badge_w = max(tw1, tw2) + 16
-        badge_h = th1 + th2 + 16
-
-        badge_y1 = max(55, y1 - badge_h - 6)
+        # 5. Aerospace Telemetry Badge using Orbitron font
+        dist_est = max(0.6, round(2.0 * (480 / max(1, box_h)), 1))
+        badge_w = 210
+        badge_h = 38
+        badge_x1 = max(12, min(w_frame - badge_w - 12, x1))
+        badge_y1 = max(55, y1 - badge_h - 4) if y1 > 60 else y1 + 10
         badge_y2 = badge_y1 + badge_h
 
         self._draw_chamfered_panel(
             frame,
-            (x1, badge_y1),
-            (x1 + badge_w, badge_y2),
+            (badge_x1, badge_y1),
+            (badge_x1 + badge_w, badge_y2),
             chamfer=6,
             bg_color=OBSIDIAN_GLASS,
             border_color=color,
-            alpha=0.82,
+            alpha=0.88,
             border_thickness=1,
         )
 
-        cv2.putText(
+        # Blit TrueType Text directly
+        blit_text(
             frame,
-            label_text,
-            (x1 + 8, badge_y1 + th1 + 4),
-            font,
-            0.44,
-            HUD_WHITE,
-            1,
-            cv2.LINE_AA,
+            f"TARGET #{index} // {candidate.label.upper()} [{candidate.score * 100:.1f}%]",
+            (badge_x1 + 8, badge_y1 + 4),
+            font_name="orbitron",
+            size=11,
+            bgr_color=HUD_WHITE,
         )
-        cv2.putText(
+        blit_text(
             frame,
-            sub_text,
-            (x1 + 8, badge_y2 - 5),
-            font,
-            0.36,
-            STARK_GOLD,
-            1,
-            cv2.LINE_AA,
+            f"LOCK: ACQUIRED  |  RANGE: ~{dist_est}m",
+            (badge_x1 + 8, badge_y1 + 20),
+            font_name="mono",
+            size=10,
+            bgr_color=STARK_GOLD,
         )
 
-    def _draw_top_telemetry(
+    def _draw_top_floating_widgets(
         self,
         frame: np.ndarray,
         active_prompt: str,
@@ -350,106 +289,115 @@ class JarvisHUD:
         fps: float,
     ) -> None:
         """
-        Render the top holographic flight telemetry bar with Arc Reactor & Waveform.
+        Render floating holographic telemetry capsules (left, center, right)
+        without blocking the camera view with a heavy banner.
         """
         h, w = frame.shape[:2]
-        font = cv2.FONT_HERSHEY_SIMPLEX
 
-        # Top Bar Panel
+        # --- LEFT CAPSULE: 3D Arc Reactor & Stark OS Branding ---
+        left_w = 220
         self._draw_chamfered_panel(
             frame,
-            (8, 6),
-            (w - 8, 58),
-            chamfer=12,
+            (10, 8),
+            (10 + left_w, 56),
+            chamfer=10,
             bg_color=OBSIDIAN_GLASS,
             border_color=PLASMA_BLUE,
-            alpha=0.80,
+            alpha=0.82,
             border_thickness=1,
         )
+        # 3D Rotating Arc Reactor
+        self._draw_arc_reactor(frame, center=(34, 32), radius=18.0)
 
-        # 1. Arc Reactor Gyroscope (Top-Left)
-        self._draw_arc_reactor(frame, center=(38, 32), radius=20)
-
-        # 2. Title & Target Identifier
-        cv2.putText(
+        # Orbitron Branding Text
+        blit_text(
             frame,
-            "STARK VISION // MARK LXXXV OS",
-            (68, 26),
-            font,
-            0.50,
-            ARC_CYAN,
-            1,
-            cv2.LINE_AA,
+            "STARK VISION",
+            (62, 14),
+            font_name="orbitron",
+            size=13,
+            bgr_color=ARC_CYAN,
         )
-        target_display = f"TARGET: '{active_prompt.upper()}'" if active_prompt else "TARGET: [STANDBY]"
+        target_display = f"LOCK: {active_prompt.upper()}" if active_prompt else "STATUS: STANDBY"
         target_color = STARK_GOLD if active_prompt else HUD_GRAY
-        cv2.putText(
+        blit_text(
             frame,
             target_display,
-            (68, 48),
-            font,
-            0.42,
-            target_color,
-            1,
-            cv2.LINE_AA,
+            (62, 34),
+            font_name="mono",
+            size=11,
+            bgr_color=target_color,
         )
 
-        # 3. Acoustic Voice Waveform (Center)
+        # --- CENTER CAPSULE: Acoustic Frequency Spectrum Visualizer ---
         is_searching = bool(active_prompt and num_candidates == 0)
-        self._draw_voice_waveform(frame, center=(w // 2, 32), is_active=is_searching)
+        center_w = 110
+        cx = w // 2
+        self._draw_chamfered_panel(
+            frame,
+            (cx - center_w // 2, 8),
+            (cx + center_w // 2, 48),
+            chamfer=8,
+            bg_color=OBSIDIAN_GLASS,
+            border_color=PLASMA_BLUE,
+            alpha=0.75,
+            border_thickness=1,
+        )
+        self._draw_voice_waveform(frame, center=(cx, 28), is_active=is_searching)
 
-        # 4. Telemetry Metrics (Right side)
+        # --- RIGHT CAPSULE: High-Speed Flight Telemetry & Hardware ---
+        right_w = 230
+        rx1 = w - right_w - 10
+        self._draw_chamfered_panel(
+            frame,
+            (rx1, 8),
+            (w - 10, 56),
+            chamfer=10,
+            bg_color=OBSIDIAN_GLASS,
+            border_color=PLASMA_BLUE,
+            alpha=0.82,
+            border_thickness=1,
+        )
         status_color = ARC_CYAN if num_candidates > 0 else HUD_GRAY
-        telemetry_str = f"TARGETS: {num_candidates}  |  LATENCY: {latency_ms:.1f}ms  |  FPS: {fps:.1f}"
-        (tw, _), _ = cv2.getTextSize(telemetry_str, font, 0.42, 1)
-        cv2.putText(
+        blit_text(
             frame,
-            telemetry_str,
-            (w - tw - 24, 26),
-            font,
-            0.42,
-            status_color,
-            1,
-            cv2.LINE_AA,
+            f"TARGETS: {num_candidates}  |  FPS: {fps:.1f}",
+            (rx1 + 10, 14),
+            font_name="mono",
+            size=11,
+            bgr_color=status_color,
+        )
+        blit_text(
+            frame,
+            f"LATENCY: {latency_ms:.1f}ms  |  GAIN: {box_threshold:.2f}",
+            (rx1 + 10, 34),
+            font_name="mono",
+            size=10,
+            bgr_color=STARK_GOLD,
         )
 
-        thresh_str = f"GAIN/THRESH: {box_threshold:.2f} [+/-]"
-        (thw, _), _ = cv2.getTextSize(thresh_str, font, 0.38, 1)
-        cv2.putText(
-            frame,
-            thresh_str,
-            (w - thw - 24, 48),
-            font,
-            0.38,
-            PLASMA_BLUE,
-            1,
-            cv2.LINE_AA,
-        )
-
-        # 5. Ambiguity Banner if triggered
+        # Ambiguity Banner
         if ambiguous:
-            ambig_text = "! AMBIGUOUS TARGETS DETECTED (SCORE DELTA < 0.15) !"
-            (aw, _), _ = cv2.getTextSize(ambig_text, font, 0.44, 1)
-            ax = (w - aw) // 2
+            ambig_text = "ALERT: AMBIGUOUS TARGETS DETECTED (DELTA < 0.15)"
+            aw = 360
+            ax1 = (w - aw) // 2
             self._draw_chamfered_panel(
                 frame,
-                (ax - 10, 64),
-                (ax + aw + 10, 92),
+                (ax1, 62),
+                (ax1 + aw, 88),
                 chamfer=6,
                 bg_color=OBSIDIAN_GLASS,
                 border_color=CRIMSON_REPULSOR,
-                alpha=0.90,
+                alpha=0.92,
                 border_thickness=1,
             )
-            cv2.putText(
+            blit_text(
                 frame,
                 ambig_text,
-                (ax, 83),
-                font,
-                0.44,
-                CRIMSON_REPULSOR,
-                1,
-                cv2.LINE_AA,
+                (ax1 + 14, 68),
+                font_name="orbitron",
+                size=11,
+                bgr_color=CRIMSON_REPULSOR,
             )
 
     def _draw_bottom_console(
@@ -459,71 +407,65 @@ class JarvisHUD:
         status_msg: str,
     ) -> None:
         """
-        Render bottom holographic search console dock with cyber chamfers.
+        Render bottom holographic search console dock with cyber chamfers and Orbitron font.
         """
         h, w = frame.shape[:2]
-        font = cv2.FONT_HERSHEY_SIMPLEX
+        bar_h = 62
+        y_top = h - bar_h - 10
+        y_bottom = h - 10
 
-        bar_h = 66
-        y_top = h - bar_h - 8
-        y_bottom = h - 8
-
-        # Main Console Dock
+        # Main Console Dock Plate
         self._draw_chamfered_panel(
             frame,
-            (8, y_top),
-            (w - 8, y_bottom),
-            chamfer=14,
+            (10, y_top),
+            (w - 10, y_bottom),
+            chamfer=12,
             bg_color=OBSIDIAN_GLASS,
             border_color=ARC_CYAN,
-            alpha=0.85,
+            alpha=0.86,
             border_thickness=1,
         )
 
-        # Search Bar Inner Plate
+        # Inner Input Field
         cursor_char = "_" if int(time.time() * 2.5) % 2 == 0 else " "
-        search_str = f"> QUERY PROTOCOL: {search_buffer}{cursor_char}"
-        cv2.rectangle(frame, (18, y_top + 10), (w - 20, y_top + 38), (35, 25, 20), -1)
-        cv2.rectangle(frame, (18, y_top + 10), (w - 20, y_top + 38), PLASMA_BLUE, 1, cv2.LINE_AA)
+        display_query = f"> PROTOCOL INPUT: [ {search_buffer}{cursor_char} ]"
+        inner_y1 = y_top + 8
+        inner_y2 = y_top + 34
+        cv2.rectangle(frame, (18, inner_y1), (w - 18, inner_y2), (28, 20, 15), -1)
+        cv2.rectangle(frame, (18, inner_y1), (w - 18, inner_y2), PLASMA_BLUE, 1, cv2.LINE_AA)
 
-        cv2.putText(
+        blit_text(
             frame,
-            search_str,
-            (28, y_top + 29),
-            font,
-            0.50,
-            HUD_WHITE,
-            1,
-            cv2.LINE_AA,
+            display_query,
+            (26, inner_y1 + 5),
+            font_name="orbitron",
+            size=12,
+            bgr_color=HUD_WHITE,
         )
 
-        # Status Tag / State Chip (Right edge of search bar)
+        # Status Tag Chip (Right edge)
         if status_msg:
-            (sw, _), _ = cv2.getTextSize(status_msg, font, 0.40, 1)
-            chip_x1 = w - sw - 36
-            cv2.rectangle(frame, (chip_x1, y_top + 12), (w - 22, y_top + 36), (50, 40, 25), -1)
-            cv2.putText(
+            chip_w = 120
+            chip_x1 = w - chip_w - 24
+            cv2.rectangle(frame, (chip_x1, inner_y1 + 2), (w - 22, inner_y2 - 2), (45, 35, 20), -1)
+            blit_text(
                 frame,
                 status_msg.upper(),
-                (chip_x1 + 6, y_top + 29),
-                font,
-                0.40,
-                STARK_GOLD,
-                1,
-                cv2.LINE_AA,
+                (chip_x1 + 8, inner_y1 + 5),
+                font_name="mono",
+                size=11,
+                bgr_color=STARK_GOLD,
             )
 
-        # Command & Hotkey Chips
-        hints = "[ENTER] ACQUIRE  |  [C] DISMISS ALL  |  [+/-] SENSITIVITY  |  [SPACE] RESCAN  |  [ESC] POWER DOWN"
-        cv2.putText(
+        # Hotkey Action Chips Line
+        hints = "[ENTER] ACQUIRE  |  [C] CLEAR  |  [+/-] GAIN  |  [SPACE] RESCAN  |  [ESC] POWER DOWN"
+        blit_text(
             frame,
             hints,
-            (22, y_bottom - 8),
-            font,
-            0.36,
-            HUD_GRAY,
-            1,
-            cv2.LINE_AA,
+            (22, y_bottom - 18),
+            font_name="mono",
+            size=10,
+            bgr_color=HUD_GRAY,
         )
 
     def _draw_screen_visor_flourishes(self, frame: np.ndarray) -> None:
@@ -531,69 +473,62 @@ class JarvisHUD:
         Draw high-tech corner flourishes and subtle perimeter visor frame.
         """
         h, w = frame.shape[:2]
-        c_len = 24
+        c_len = 22
 
-        # 1. Top-Left Corner Visor Bracket
-        cv2.line(frame, (10, 10), (10 + c_len, 10), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (10, 10), (10, 10 + c_len), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (14, 14), (14 + c_len - 8, 14), PLASMA_BLUE, 1, cv2.LINE_AA)
-        cv2.line(frame, (14, 14), (14, 14 + c_len - 8), PLASMA_BLUE, 1, cv2.LINE_AA)
+        # 4 Corner Visor Brackets
+        for cx_base, cy_base, dx, dy in (
+            (10, 10, 1, 1),
+            (w - 10, 10, -1, 1),
+            (10, h - 10, 1, -1),
+            (w - 10, h - 10, -1, -1),
+        ):
+            cv2.line(frame, (cx_base, cy_base), (cx_base + dx * c_len, cy_base), ARC_CYAN, 2, cv2.LINE_AA)
+            cv2.line(frame, (cx_base, cy_base), (cx_base, cy_base + dy * c_len), ARC_CYAN, 2, cv2.LINE_AA)
+            cv2.line(
+                frame,
+                (cx_base + dx * 3, cy_base + dy * 3),
+                (cx_base + dx * (c_len - 6), cy_base + dy * 3),
+                PLASMA_BLUE,
+                1,
+                cv2.LINE_AA,
+            )
+            cv2.line(
+                frame,
+                (cx_base + dx * 3, cy_base + dy * 3),
+                (cx_base + dx * 3, cy_base + dy * (c_len - 6)),
+                PLASMA_BLUE,
+                1,
+                cv2.LINE_AA,
+            )
 
-        # 2. Top-Right Corner Visor Bracket
-        cv2.line(frame, (w - 10, 10), (w - 10 - c_len, 10), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (w - 10, 10), (w - 10, 10 + c_len), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (w - 14, 14), (w - 14 - c_len + 8, 14), PLASMA_BLUE, 1, cv2.LINE_AA)
-        cv2.line(frame, (w - 14, 14), (w - 14, 14 + c_len - 8), PLASMA_BLUE, 1, cv2.LINE_AA)
-
-        # 3. Bottom-Left Corner Visor Bracket
-        cv2.line(frame, (10, h - 10), (10 + c_len, h - 10), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (10, h - 10), (10, h - 10 - c_len), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (14, h - 14), (14 + c_len - 8, h - 14), PLASMA_BLUE, 1, cv2.LINE_AA)
-        cv2.line(frame, (14, h - 14), (14, h - 14 - c_len + 8), PLASMA_BLUE, 1, cv2.LINE_AA)
-
-        # 4. Bottom-Right Corner Visor Bracket
-        cv2.line(frame, (w - 10, h - 10), (w - 10 - c_len, h - 10), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (w - 10, h - 10), (w - 10, h - 10 - c_len), ARC_CYAN, 2, cv2.LINE_AA)
-        cv2.line(frame, (w - 14, h - 14), (w - 14 - c_len + 8, h - 14), PLASMA_BLUE, 1, cv2.LINE_AA)
-        cv2.line(frame, (w - 14, h - 14), (w - 14, h - 14 - c_len + 8), PLASMA_BLUE, 1, cv2.LINE_AA)
-
-    def _draw_marginal_telemetry_rails(self, frame: np.ndarray) -> None:
-        """
-        Draw subtle lateral aerospace telemetry rails (altitude/pitch ladder and compute stats).
-        """
-        h, w = frame.shape[:2]
-        font = cv2.FONT_HERSHEY_SIMPLEX
+        # Marginal Telemetry Rail: Pitch / Elevation Ladder
         cy = h // 2
-
-        # Left Rail: Pitch / Sensor Elevation Ladder
-        ladder_ticks = [-30, -20, -10, 0, 10, 20, 30]
-        for val in ladder_ticks:
+        for val in (-20, -10, 0, 10, 20):
             y = cy - int(val * 2.2)
-            if 70 < y < h - 80:
+            if 65 < y < h - 75:
                 is_zero = val == 0
-                tick_w = 10 if is_zero else 6
-                color = ARC_CYAN if is_zero else HUD_GRAY
-                cv2.line(frame, (14, y), (14 + tick_w, y), color, 1, cv2.LINE_AA)
+                tick_w = 8 if is_zero else 5
+                color = ARC_CYAN if is_zero else PLASMA_BLUE
+                cv2.line(frame, (12, y), (12 + tick_w, y), color, 1, cv2.LINE_AA)
                 if abs(val) in (0, 20):
-                    txt = f"{val:+d}" if val != 0 else " 0"
-                    cv2.putText(frame, txt, (28, y + 4), font, 0.30, HUD_GRAY, 1, cv2.LINE_AA)
+                    blit_text(frame, f"{val:+d}", (22, y - 6), font_name="mono", size=9, bgr_color=HUD_GRAY)
 
-        # Right Rail: System Compute & Accelerator telemetry plate
-        rx = w - 110
-        ry = cy - 25
+        # Right Marginal Rail: RTX 4060 GPU Badge
+        rx = w - 108
+        ry = cy - 24
         self._draw_chamfered_panel(
             frame,
             (rx, ry),
-            (w - 12, ry + 50),
+            (w - 12, ry + 46),
             chamfer=6,
             bg_color=OBSIDIAN_GLASS,
             border_color=PLASMA_BLUE,
-            alpha=0.65,
+            alpha=0.68,
             border_thickness=1,
         )
-        cv2.putText(frame, "RTX 4060", (rx + 8, ry + 16), font, 0.34, ARC_CYAN, 1, cv2.LINE_AA)
-        cv2.putText(frame, "CUDA 13 // 8GB", (rx + 8, ry + 30), font, 0.28, HUD_GRAY, 1, cv2.LINE_AA)
-        cv2.putText(frame, "SYNC: NOMINAL", (rx + 8, ry + 44), font, 0.28, STARK_GOLD, 1, cv2.LINE_AA)
+        blit_text(frame, "RTX 4060", (rx + 8, ry + 4), font_name="orbitron", size=10, bgr_color=ARC_CYAN)
+        blit_text(frame, "CUDA 13 // 8GB", (rx + 8, ry + 18), font_name="mono", size=9, bgr_color=HUD_GRAY)
+        blit_text(frame, "SYNC: ACTIVE", (rx + 8, ry + 30), font_name="mono", size=9, bgr_color=STARK_GOLD)
 
     def render_boot_sequence(self, frame: np.ndarray) -> bool:
         """
@@ -605,7 +540,6 @@ class JarvisHUD:
         if self.is_booted:
             return True
 
-        # Trigger non-blocking JARVIS voice greeting on initial boot frame
         if self.enable_voice and not self.voice_played:
             if play_startup_greeting is not None:
                 play_startup_greeting()
@@ -618,56 +552,50 @@ class JarvisHUD:
         duration = 2.5
         progress = min(1.0, elapsed / duration)
         h, w = frame.shape[:2]
-        font = cv2.FONT_HERSHEY_SIMPLEX
 
         # Darken frame during boot
         overlay = frame.copy()
-        cv2.rectangle(overlay, (0, 0), (w, h), (10, 8, 5), -1)
-        cv2.addWeighted(overlay, 0.85, frame, 0.15, 0, frame)
+        cv2.rectangle(overlay, (0, 0), (w, h), (12, 8, 6), -1)
+        cv2.addWeighted(overlay, 0.88, frame, 0.12, 0, frame)
 
-        # Center Arc Reactor Spin-Up
-        cx, cy = w // 2, h // 2 - 30
-        r_spin = int(35 + 15 * math.sin(progress * math.pi))
-        self._draw_arc_reactor(frame, center=(cx, cy), radius=r_spin)
+        # Center 3D Arc Reactor Spin-Up
+        cx, cy = w // 2, h // 2 - 32
+        r_spin = float(28 + 14 * math.sin(progress * math.pi))
+        draw_3d_arc_reactor(frame, center=(cx, cy), frame_count=self.frame_count * 2, base_radius=r_spin)
 
-        # System Diagnostic Text lines typing out
         lines = [
-            "STARK INDUSTRIES // MARK LXXXV INITIALIZATION",
-            "> NEURAL REASONING ENGINE: ONLINE",
-            "> VISION BACKBONE: SWIN TRANSFORMER ACTIVE",
-            "> SENSOR INTERFACE: /dev/video0 CALIBRATED",
-            "> PROTOCOL ARMED: AWAITING TARGET EXPRESSION",
+            ("STARK INDUSTRIES // MARK LXXXV INITIALIZATION", "orbitron", 14, ARC_CYAN),
+            ("> NEURAL REASONING ENGINE: ONLINE", "mono", 11, HUD_WHITE),
+            ("> VISION BACKBONE: SWIN TRANSFORMER ACTIVE", "mono", 11, HUD_WHITE),
+            ("> SENSOR INTERFACE: /dev/video0 CALIBRATED", "mono", 11, HUD_WHITE),
+            ("> PROTOCOL ARMED: AWAITING OPERATOR DIRECTIVE", "mono", 11, STARK_GOLD),
         ]
 
         num_visible = min(len(lines), int(progress * (len(lines) + 1)))
-        y_start = cy + 70
+        y_start = cy + 62
 
         for idx in range(num_visible):
-            color = ARC_CYAN if idx == 0 else (STARK_GOLD if idx == len(lines) - 1 else HUD_WHITE)
-            (tw, _), _ = cv2.getTextSize(lines[idx], font, 0.44, 1)
-            cv2.putText(
+            text, fname, fsize, color = lines[idx]
+            blit_text(
                 frame,
-                lines[idx],
-                ((w - tw) // 2, y_start + idx * 24),
-                font,
-                0.44,
-                color,
-                1,
-                cv2.LINE_AA,
+                text,
+                (cx - 180, y_start + idx * 22),
+                font_name=fname,
+                size=fsize,
+                bgr_color=color,
             )
 
-        # Progress Bar & Status
-        bar_w = 260
+        # Progress Bar & Percentage
+        bar_w = 280
         bar_h = 6
         bx1 = (w - bar_w) // 2
-        by1 = y_start + len(lines) * 24 + 15
-        cv2.rectangle(frame, (bx1, by1), (bx1 + bar_w, by1 + bar_h), (50, 40, 30), -1)
+        by1 = y_start + len(lines) * 22 + 12
+        cv2.rectangle(frame, (bx1, by1), (bx1 + bar_w, by1 + bar_h), (45, 35, 25), -1)
         fill_w = int(bar_w * progress)
         cv2.rectangle(frame, (bx1, by1), (bx1 + fill_w, by1 + bar_h), ARC_CYAN, -1)
 
         pct_str = f"SYSTEM STATUS: {int(progress * 100)}%"
-        (pw, _), _ = cv2.getTextSize(pct_str, font, 0.36, 1)
-        cv2.putText(frame, pct_str, ((w - pw) // 2, by1 + 18), font, 0.36, STARK_GOLD, 1, cv2.LINE_AA)
+        blit_text(frame, pct_str, (cx - 65, by1 + 12), font_name="orbitron", size=10, bgr_color=STARK_GOLD)
 
         self.frame_count += 1
 
@@ -708,17 +636,16 @@ class JarvisHUD:
         """
         self.frame_count += 1
 
-        # 1. Visor Screen Flourishes & Marginal Telemetry Rails
+        # 1. Visor Screen Flourishes & Marginal Rails
         self._draw_screen_visor_flourishes(frame)
-        self._draw_marginal_telemetry_rails(frame)
 
         # 2. Render Target Reticles
         for idx, cand in enumerate(candidates):
             color = ARC_CYAN if idx == 0 else STARK_GOLD
             self._draw_target_reticle(frame, cand, index=idx + 1, color=color)
 
-        # 3. Render Top Flight Telemetry Bar
-        self._draw_top_telemetry(
+        # 3. Render Floating Top Telemetry Capsules
+        self._draw_top_floating_widgets(
             frame,
             active_prompt=active_prompt,
             latency_ms=latency_ms,
@@ -728,7 +655,7 @@ class JarvisHUD:
             fps=fps,
         )
 
-        # 4. Render Bottom Cyber Command Console
+        # 4. Render Bottom Cyber Command Console Dock
         self._draw_bottom_console(
             frame,
             search_buffer=search_buffer,
