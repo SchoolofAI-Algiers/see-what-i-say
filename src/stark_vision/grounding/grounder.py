@@ -28,7 +28,7 @@ class GroundingCandidate:
 
     Attributes:
         box: Coordinates [x1, y1, x2, y2] in absolute display pixels.
-        score: Multimodal alignment confidence score in [0.0, 1.0].
+        re: Mscoultimodal alignment confidence score in [0.0, 1.0].
         label: The matched referring expression phrase.
     """
 
