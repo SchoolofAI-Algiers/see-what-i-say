@@ -4,12 +4,12 @@ import numpy as np
 
 
 class AudioRecorder:
-    
     def __init__(self):
         self.recording = False
         self.rate = 48000
         self.nb_channels = 1
         self.chunks = []
+        self.merged_chunks = None
 
         self.record = sd.InputStream(
           samplerate=self.rate,

@@ -16,23 +16,29 @@ class SpeechToText:
         audio_16k = resample_poly(audio, 1, 3).astype(np.float32)
 
         result = self.model.transcribe(audio_16k, language="en",temperature=0)
-        print(result["text"])
+        return result["text"]
+
+
+def recording_fnct():
+    print("Press P to start recording")
+    keyboard.wait('p')
+    recorder.start()
+    print("start recording...")
+    
+    print("Press P to stop recording")
+    keyboard.wait('p')
+    recorder.stop()
+    print("stop recording.")
+    return recorder.merged_chunks
 
 
 recorder = AudioRecorder()
-print("Hold P to record. Release P to stop.")
+# recording_fnct()
+# record = recorder.merged_chunks
+# write("test.wav", 48000, record)
+# stt = SpeechToText()
+# transcripted_speech = stt.transcription(record)
 
-keyboard.wait('p')
-recorder.start()
-print("start recording...")
-
-keyboard.wait('p')
-recorder.stop()
-print("stop recording.")
-record = recorder.merged_chunks
-write("test.wav", 48000, record)
-stt = SpeechToText()
-stt.transcription(record)
 
 
 
