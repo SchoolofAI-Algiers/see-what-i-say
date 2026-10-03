@@ -16,8 +16,7 @@ class Effect(Enum):
     HIGHLIGHT = 1
     RECOLOR = 2
     BLUR = 3
-    GLOW = 4
-    INVISIBLE = 5
+    ISOLATE = 4
 
 @dataclass(frozen=True)
 class EffectSpec():
@@ -84,17 +83,10 @@ class CommandParser:
                 pattern = rf"make\s+(it|him|her|the object)\s+(.*)"
                 searched_pattern = re.search(pattern, sentence, re.IGNORECASE)
 
-                if searched_pattern is not None and searched_pattern.group(2) == "glow":
+                if searched_pattern is not None and searched_pattern.group(2) == "isolated" :
                     target = searched_pattern.group(1)
                     act = Action.SET_EFFECT
-                    effect = EffectSpec(type=Effect.GLOW)
-                    command = Command(action= act, referring_expression=target, effect=effect)
-                    return command
-
-                elif searched_pattern is not None and searched_pattern.group(2) == "invisible" :
-                    target = searched_pattern.group(1)
-                    act = Action.SET_EFFECT
-                    effect = EffectSpec(type=Effect.INVISIBLE)
+                    effect = EffectSpec(type=Effect.ISOLATE)
                     command = Command(action= act, referring_expression=target, effect=effect)
                     return command 
                    
@@ -128,10 +120,9 @@ print(parser.parse(sentence))
 # "highlight the woman on the left",
 # "make it blue",
 # "blur it",
-# "make it glow",
 # "make it invisible",
 # "make him glow",
-# "make her invisible"
+# "make her isolated"
 # ]
 # for non_normalized_sentence in Tests : 
 #     sentence = non_normalized_sentence.lower()
@@ -146,7 +137,6 @@ print(parser.parse(sentence))
 # # Command(action=<Action.SET_EFFECT: 2>, referring_expression='the woman on the left', effect=EffectSpec(type=<Effect.HIGHLIGHT: 1>, color=None))
 # # Command(action=<Action.SET_EFFECT: 2>, referring_expression='it', effect=EffectSpec(type=<Effect.RECOLOR: 2>, color='blue'))
 # # Command(action=<Action.SET_EFFECT: 2>, referring_expression='it', effect=EffectSpec(type=<Effect.BLUR: 3>, color=None))
-# # Command(action=<Action.SET_EFFECT: 2>, referring_expression='it', effect=EffectSpec(type=<Effect.GLOW: 4>, color=None))
 # # Command(action=<Action.SET_EFFECT: 2>, referring_expression='it', effect=EffectSpec(type=<Effect.INVISIBLE: 5>, color=None))
 # # Command(action=<Action.SET_EFFECT: 2>, referring_expression='him', effect=EffectSpec(type=<Effect.GLOW: 4>, color=None))
 # # Command(action=<Action.SET_EFFECT: 2>, referring_expression='her', effect=EffectSpec(type=<Effect.INVISIBLE: 5>, color=None))
