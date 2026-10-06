@@ -141,3 +141,12 @@ The interface of this project
 - [SAM 2](https://github.com/facebookresearch/sam2) — promptable image/video segmentation
 - [Whisper](https://github.com/openai/whisper) — local speech recognition
 - [UniPixel](https://github.com/PolyU-ChenLab/UniPixel) — future-extension reference (unified referring + reasoning)
+
+# Interface contracts and mock pipeline
+
+The current MVP module contracts and deterministic end-to-end mock are documented in [`docs/interfaces.md`](docs/interfaces.md). Run the mock demo and CPU-only checks from the repository root:
+
+```bash
+PYTHONPATH=src python3 scripts/mock_pipeline_demo.py
+PYTHONPATH=src python3 -m unittest discover -s tests -v
+```
