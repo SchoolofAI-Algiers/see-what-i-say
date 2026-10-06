@@ -1,0 +1,9 @@
+[project]
+name = "stark-vision"
+version = "0.1.0"
+description = "STARK VISION: Real-Time Speech-Guided Referring Video Segmentation"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.4.6",
+]
