@@ -44,7 +44,7 @@ export default function StarkVisionCockpit() {
   const [effectMode, setEffectMode] = useState<EffectMode>("highlight");
   const [boxThreshold, setBoxThreshold] = useState<number>(0.35);
   const [textThreshold, setTextThreshold] = useState<number>(0.25);
-  const [cameraActive, setCameraActive] = useState<boolean>(false); // Start with clean penthouse background, click to enable webcam
+  const [cameraActive, setCameraActive] = useState<boolean>(true); // Defaults to live webcam feed
 
   // Telemetry & WebSocket state
   const [wsConnected, setWsConnected] = useState<boolean>(false);
@@ -75,7 +75,7 @@ export default function StarkVisionCockpit() {
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
-            type: "update_query",
+            type: "ground",
             query: newQuery.trim(),
             box_threshold: boxThreshold,
             text_threshold: textThreshold,
@@ -130,13 +130,13 @@ export default function StarkVisionCockpit() {
         socket.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            if (data.detections && data.detections.length > 0) {
+            if (data.detections !== undefined) {
               setDetections(data.detections);
             }
-            if (data.inference_ms) {
+            if (data.inference_ms !== undefined) {
               setInferenceMs(data.inference_ms);
             }
-            if (data.vram_used_mb) {
+            if (data.vram_used_mb !== undefined) {
               setVramUsedMb(data.vram_used_mb);
             }
           } catch (e) {
@@ -240,24 +240,6 @@ export default function StarkVisionCockpit() {
     });
   }, []);
 
-  // Send Frame + Query to Grounding DINO via WebSocket
-  const handleFrameCapture = useCallback(
-    (base64Jpeg: string) => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(
-          JSON.stringify({
-            type: "ground_frame",
-            image_data: base64Jpeg,
-            query: query,
-            box_threshold: boxThreshold,
-            text_threshold: textThreshold,
-          })
-        );
-      }
-    },
-    [query, boxThreshold, textThreshold]
-  );
-
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#05080e] select-none">
       {/* Optional Cinematic JARVIS Boot Sequence */}
@@ -270,7 +252,6 @@ export default function StarkVisionCockpit() {
         detections={detections}
         effectMode={effectMode}
         cameraActive={cameraActive}
-        onFrameCapture={handleFrameCapture}
         className="absolute inset-0 z-0"
       />
 

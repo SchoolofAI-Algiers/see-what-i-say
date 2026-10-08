@@ -9,6 +9,7 @@ import {
   Eye,
   Search,
   Camera,
+  Sliders,
 } from "lucide-react";
 import { EffectMode } from "./CommandDock";
 
@@ -45,7 +46,7 @@ export default function CommandConsoleHUD({
   onToggleCamera,
   className = "",
 }: CommandConsoleHUDProps) {
-  const [activeTab, setActiveTab] = useState<"none" | "effects" | "maps" | "cfg">("none");
+  const [activeTab, setActiveTab] = useState<"none" | "effects" | "cfg">("none");
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -82,74 +83,93 @@ export default function CommandConsoleHUD({
 
   return (
     <div className={`flex flex-col items-center gap-2 select-none ${className}`}>
-      {/* Expandable Panel for Prompts, Effects, or Config */}
+      {/* 1. Permanent Glowing Referring Expression Command Center */}
+      <div className="bg-[#070e1b]/95 border border-stark-gold/70 rounded-xl px-4 py-2.5 max-w-2xl w-full backdrop-blur-xl shadow-[0_0_25px_rgba(255,191,0,0.2)] flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-stark-cyan absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSubmitQuery(query);
+              }}
+              placeholder="Referring query (e.g. 'person in black hoodie on the left', 'laptop')..."
+              className="w-full bg-slate-900/90 border border-stark-cyan/50 focus:border-stark-gold text-slate-100 placeholder:text-slate-500 pl-9 pr-24 py-2 rounded text-xs font-mono outline-none shadow-[0_0_12px_rgba(0,245,255,0.2)]"
+            />
+            <button
+              onClick={() => onSubmitQuery(query)}
+              className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 bg-stark-cyan/20 hover:bg-stark-cyan/40 border border-stark-cyan text-stark-cyan hover:text-white text-[10px] font-orbitron font-bold rounded uppercase transition-all shadow-[0_0_8px_rgba(0,245,255,0.4)]"
+            >
+              LOCK ON
+            </button>
+          </div>
+
+          <button
+            onClick={onToggleCamera}
+            className={`px-3 py-2 rounded border text-[10px] font-orbitron uppercase flex items-center gap-1.5 transition-all ${
+              cameraActive
+                ? "border-stark-cyan text-black bg-stark-cyan font-bold shadow-[0_0_15px_#00F5FF]"
+                : "border-stark-gold text-stark-gold bg-stark-gold/10 hover:bg-stark-gold/20"
+            }`}
+            title="Toggle Live Webcam Feed (C)"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            {cameraActive ? "LIVE CAM" : "LAB VIEW"}
+          </button>
+        </div>
+
+        {/* Quick-Target Referring Expression Preset Chips */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-800/80">
+          <span className="text-[9px] font-orbitron font-bold text-slate-400 uppercase tracking-wider mr-1">
+            TARGETS:
+          </span>
+          {["person", "laptop", "cell phone", "bottle", "chair", "backpack"].map((tgt) => (
+            <button
+              key={tgt}
+              onClick={() => {
+                onQueryChange(tgt);
+                onSubmitQuery(tgt);
+              }}
+              className="px-2.5 py-0.5 bg-slate-900/80 border border-stark-cyan/40 hover:border-stark-gold hover:text-stark-gold rounded font-mono text-[11px] text-slate-300 transition-all hover:shadow-[0_0_8px_rgba(255,191,0,0.3)]"
+            >
+              #{tgt}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 2. Expandable Panel for Effects & Configurations */}
       {activeTab !== "none" && (
-        <div className="bg-[#070e1b]/90 border border-stark-gold/60 rounded-lg p-3 max-w-2xl w-full backdrop-blur-xl shadow-[0_0_25px_rgba(255,191,0,0.2)] animate-in fade-in duration-200">
+        <div className="bg-[#070e1b]/95 border border-stark-gold/60 rounded-lg p-3 max-w-2xl w-full backdrop-blur-xl shadow-[0_0_20px_rgba(255,191,0,0.2)] animate-in fade-in duration-150">
           {activeTab === "cfg" && (
-            <div className="flex flex-col gap-2.5">
-              {/* Natural Language Query Bar */}
+            <div className="flex items-center justify-between gap-4 flex-wrap text-[10px] font-mono">
               <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-stark-cyan absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => onQueryChange(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") onSubmitQuery(query);
-                    }}
-                    placeholder="Speak or enter prompt (e.g. 'person in black shirt', 'water bottle')..."
-                    className="w-full bg-slate-900/80 border border-stark-cyan/50 focus:border-stark-gold text-slate-100 placeholder:text-slate-500 pl-9 pr-20 py-2 rounded text-xs font-mono outline-none shadow-[0_0_10px_rgba(0,245,255,0.2)]"
-                  />
-                  <button
-                    onClick={() => onSubmitQuery(query)}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 bg-stark-cyan/20 hover:bg-stark-cyan/40 border border-stark-cyan text-stark-cyan text-[10px] font-orbitron font-bold rounded uppercase"
-                  >
-                    LOCK ON
-                  </button>
-                </div>
-
-                <button
-                  onClick={onToggleCamera}
-                  className={`px-3 py-1.5 rounded border text-[10px] font-orbitron uppercase flex items-center gap-1.5 transition-all ${
-                    cameraActive
-                      ? "border-stark-cyan text-stark-cyan bg-stark-cyan/10"
-                      : "border-stark-gold text-stark-gold bg-stark-gold/10"
-                  }`}
-                >
-                  <Camera className="w-3.5 h-3.5" />
-                  {cameraActive ? "Webcam" : "Demo Room"}
-                </button>
+                <span className="text-slate-400">Box Confidence:</span>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="0.8"
+                  step="0.05"
+                  value={boxThreshold}
+                  onChange={(e) => onBoxThresholdChange(parseFloat(e.target.value))}
+                  className="w-24 accent-stark-cyan cursor-pointer"
+                />
+                <span className="text-stark-cyan font-bold">{boxThreshold.toFixed(2)}</span>
               </div>
-
-              {/* Threshold Sliders */}
-              <div className="flex items-center justify-between gap-4 flex-wrap pt-1 border-t border-slate-800 text-[10px] font-mono">
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400">Box Confidence:</span>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="0.8"
-                    step="0.05"
-                    value={boxThreshold}
-                    onChange={(e) => onBoxThresholdChange(parseFloat(e.target.value))}
-                    className="w-24 accent-stark-cyan cursor-pointer"
-                  />
-                  <span className="text-stark-cyan font-bold">{boxThreshold.toFixed(2)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-slate-400">Text Alignment:</span>
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="0.8"
-                    step="0.05"
-                    value={textThreshold}
-                    onChange={(e) => onTextThresholdChange(parseFloat(e.target.value))}
-                    className="w-24 accent-stark-gold cursor-pointer"
-                  />
-                  <span className="text-stark-gold font-bold">{textThreshold.toFixed(2)}</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-400">Text Alignment:</span>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="0.8"
+                  step="0.05"
+                  value={textThreshold}
+                  onChange={(e) => onTextThresholdChange(parseFloat(e.target.value))}
+                  className="w-24 accent-stark-gold cursor-pointer"
+                />
+                <span className="text-stark-gold font-bold">{textThreshold.toFixed(2)}</span>
               </div>
             </div>
           )}
@@ -202,37 +222,17 @@ export default function CommandConsoleHUD({
               </button>
             </div>
           )}
-
-          {activeTab === "maps" && (
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              {["person", "laptop", "cell phone", "bottle", "chair", "backpack"].map((tgt) => (
-                <button
-                  key={tgt}
-                  onClick={() => {
-                    onQueryChange(tgt);
-                    onSubmitQuery(tgt);
-                  }}
-                  className="px-3 py-1 bg-slate-900 border border-stark-cyan/40 hover:border-stark-gold rounded font-mono text-xs text-slate-200 hover:text-stark-cyan transition-all"
-                >
-                  #{tgt}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
-      {/* Main Chiseled Gold Cockpit Chin Console (1:1 with Theme Mockup) */}
-      <div className="relative bg-[#070e1b]/90 border-2 border-stark-gold rounded-t-xl px-6 py-2.5 flex flex-col items-center gap-2 shadow-[0_0_30px_rgba(255,191,0,0.25)]">
-        {/* Inner Cyan Accent Line */}
+      {/* 3. Main Chiseled Gold Cockpit Chin Console */}
+      <div className="relative bg-[#070e1b]/95 border-2 border-stark-gold rounded-t-xl px-6 py-2.5 flex flex-col items-center gap-2 shadow-[0_0_30px_rgba(255,191,0,0.25)]">
         <div className="absolute inset-1 border border-stark-cyan/40 rounded-t-lg pointer-events-none" />
 
-        {/* Top Console Title: COMM // [AUDIO-REC] */}
         <div className="font-orbitron text-[9px] md:text-[10px] font-bold tracking-[0.2em] text-stark-cyan text-glow-cyan uppercase">
-          COMM // [AUDIO-REC]
+          COMM // [STARK-REC]
         </div>
 
-        {/* Action Button Row */}
         <div className="flex items-center gap-3">
           {/* Glowing Mic Push-to-Talk Button */}
           <button
@@ -268,31 +268,20 @@ export default function CommandConsoleHUD({
                 : "bg-slate-900/80 border-stark-cyan/60 hover:border-stark-gold text-stark-cyan hover:text-stark-gold"
             }`}
           >
-            WEAPONS
-          </button>
-
-          {/* [ MAPS / PRESETS ] */}
-          <button
-            onClick={() => setActiveTab(activeTab === "maps" ? "none" : "maps")}
-            className={`px-4 py-2 border font-orbitron text-[11px] font-bold tracking-wider rounded uppercase transition-all ${
-              activeTab === "maps"
-                ? "bg-stark-gold text-black border-stark-gold shadow-[0_0_15px_#FFBF00]"
-                : "bg-slate-900/80 border-stark-cyan/60 hover:border-stark-gold text-stark-cyan hover:text-stark-gold"
-            }`}
-          >
-            MAPS
+            EFFECTS
           </button>
 
           {/* [ HUD CFG ] */}
           <button
             onClick={() => setActiveTab(activeTab === "cfg" ? "none" : "cfg")}
-            className={`px-4 py-2 border font-orbitron text-[11px] font-bold tracking-wider rounded uppercase transition-all ${
+            className={`px-4 py-2 border font-orbitron text-[11px] font-bold tracking-wider rounded uppercase flex items-center gap-1 transition-all ${
               activeTab === "cfg"
                 ? "bg-stark-gold text-black border-stark-gold shadow-[0_0_15px_#FFBF00]"
                 : "bg-slate-900/80 border-stark-cyan/60 hover:border-stark-gold text-stark-cyan hover:text-stark-gold"
             }`}
           >
-            HUD CFG
+            <Sliders className="w-3 h-3" />
+            CFG
           </button>
         </div>
       </div>
