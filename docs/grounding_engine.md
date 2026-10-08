@@ -23,11 +23,11 @@ It takes:
 Returns a list of `GroundingCandidate` objects sorted by confidence score.
 
 ### GroundingCandidate
-Simple dataclass holding the prediction:
-- `box`: absolute pixel coords `(x1, y1, x2, y2)` matching opencv frame dimensions
+Dataclass holding the prediction (from `stark_vision.contracts`):
+- `box`: `BoundingBox` instance with `.center`, `.xyxy`, and pixel coordinates `(x1, y1, x2, y2)`
 - `score`: float confidence between 0 and 1
 - `label`: matched phrase text
-- helper properties: `width`, `height`, `center`, `area`
+- helper properties: `x1`, `y1`, `x2`, `y2`, `width`, `height`, `center`, `area`
 
 ### Ambiguity check
 `is_ambiguous(candidates, delta_threshold=0.15)` checks if the top two detected candidates have scores that are too close to each other. If score difference is below 0.15, we flag it so the system can ask user to clarify which object they meant.
