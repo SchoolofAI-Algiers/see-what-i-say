@@ -22,7 +22,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
   const [currentStep, setCurrentStep] = useState(0);
 
   useEffect(() => {
-    // Speak JARVIS welcome message using SpeechSynthesis
+    // plays greeting sound over browser speech synth if supported
     try {
       if ("speechSynthesis" in window) {
         window.speechSynthesis.cancel();
@@ -31,7 +31,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
         );
         utterance.rate = 1.05;
         utterance.pitch = 0.95;
-        // Attempt to find a British or deep male voice if available
+        // try finding english male voice
         const voices = window.speechSynthesis.getVoices();
         const jarvisVoice = voices.find(
           (v) =>
@@ -47,7 +47,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
       console.warn("Speech synthesis unavailable:", e);
     }
 
-    // Step progression
+    // cycle through log lines
     const stepInterval = setInterval(() => {
       setCurrentStep((prev) => {
         if (prev < BOOT_LOGS.length - 1) {
@@ -82,7 +82,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
       className="fixed inset-0 z-50 bg-[#070B12]/95 backdrop-blur-2xl flex flex-col items-center justify-center cursor-pointer select-none"
     >
       <div className="relative w-full max-w-xl p-8 flex flex-col items-center gap-6">
-        {/* Animated Nanotech Arc Reactor Center Graphic */}
+        {/* center spinner graphic */}
         <div className="relative w-36 h-36 flex items-center justify-center">
           <div className="absolute inset-0 rounded-full border-2 border-dashed border-stark-cyan/40 animate-radar-spin" />
           <div className="absolute inset-2 rounded-full border border-stark-gold/50 animate-radar-reverse" />
@@ -91,7 +91,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
           </div>
         </div>
 
-        {/* Title */}
+        {/* heading */}
         <div className="flex flex-col items-center gap-1">
           <h1 className="font-orbitron text-2xl font-bold tracking-widest text-stark-cyan text-glow-cyan">
             STARK VISION // MK-85
@@ -101,7 +101,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
           </p>
         </div>
 
-        {/* Progress Bar */}
+        {/* progress indicator */}
         <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden border border-stark-cyan/30">
           <motion.div
             className="h-full bg-gradient-to-r from-stark-cyan via-stark-gold to-stark-cyan"
@@ -113,7 +113,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
           />
         </div>
 
-        {/* Diagnostic Log Lines */}
+        {/* boot logs */}
         <div className="w-full bg-black/60 p-4 rounded border border-stark-cyan/30 font-mono text-[11px] h-32 overflow-hidden flex flex-col justify-end gap-1">
           {BOOT_LOGS.slice(0, currentStep + 1).map((log, idx) => (
             <motion.div
@@ -136,7 +136,7 @@ export default function BootSequence({ onComplete }: BootSequenceProps) {
           ))}
         </div>
 
-        {/* Skip hint */}
+        {/* skip hint */}
         <div className="flex items-center gap-2 text-[10px] font-mono text-slate-500">
           <span className="px-1.5 py-0.5 rounded border border-slate-700 bg-slate-900 text-slate-300">
             ESC

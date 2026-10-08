@@ -1,8 +1,5 @@
 """
-STARK VISION — Coordinate Geometry & Spatial Transformations.
-
-Provides robust, vectorized, and boundary-checked transformations
-between pixel space [xyxy], bounding box format [xywh], and normalized [0, 1] space.
+Bounding box math helpers for converting between pixel xyxy, xywh, and normalized [0, 1] space.
 """
 
 from __future__ import annotations

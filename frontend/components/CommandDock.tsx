@@ -59,10 +59,10 @@ export default function CommandDock({
 }: CommandDockProps) {
   const [showConfig, setShowConfig] = useState(false);
 
-  // Global Keyboard Shortcuts (Space for mic, 1-4 for effect modes)
+  // hotkeys for quick controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input
+      // ignore keys when typng in text input
       if (
         document.activeElement?.tagName === "INPUT" ||
         document.activeElement?.tagName === "TEXTAREA"
@@ -95,7 +95,7 @@ export default function CommandDock({
     <div
       className={`fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-4xl flex flex-col items-center gap-2 z-40 ${className}`}
     >
-      {/* Expandable Configuration Drawer */}
+      {/* config drawer */}
       {showConfig && (
         <div className="hud-glass clip-chamfer-all w-full p-4 mb-2 flex flex-wrap items-center justify-between gap-4 border border-stark-gold/40 animate-in fade-in slide-in-from-bottom-2 duration-200">
           <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export default function CommandDock({
           </div>
 
           <div className="flex items-center gap-6 flex-wrap">
-            {/* Box Threshold Slider */}
+            {/* confidence slider */}
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-mono text-slate-300">
                 Box Confidence:
@@ -125,7 +125,7 @@ export default function CommandDock({
               </span>
             </div>
 
-            {/* Text Threshold Slider */}
+            {/* text slider */}
             <div className="flex items-center gap-2">
               <span className="text-[11px] font-mono text-slate-300">
                 Text Alignment:
@@ -146,7 +146,7 @@ export default function CommandDock({
               </span>
             </div>
 
-            {/* Toggle Camera button */}
+            {/* cam toggle */}
             <button
               onClick={onToggleCamera}
               className={`px-3 py-1 text-[11px] font-orbitron uppercase border flex items-center gap-1.5 transition-all ${
@@ -162,9 +162,9 @@ export default function CommandDock({
         </div>
       )}
 
-      {/* Main Floating Capsule Dock */}
+      {/* dock bar */}
       <div className="hud-glass-dock clip-chamfer-dock w-full p-2.5 px-4 flex items-center gap-3">
-        {/* Push-to-Talk Mic Button */}
+        {/* mic button */}
         <button
           onClick={onToggleRecording}
           title="Push to Talk (Shortcut: SPACE)"
@@ -184,7 +184,7 @@ export default function CommandDock({
           </span>
         </button>
 
-        {/* Search Input Bar */}
+        {/* search input */}
         <div className="flex-1 relative flex items-center">
           <Search className="w-4 h-4 text-stark-cyan absolute left-3 pointer-events-none" />
           <input
@@ -207,7 +207,7 @@ export default function CommandDock({
           </button>
         </div>
 
-        {/* Effect Mode Tabs */}
+        {/* mode buttons */}
         <div className="hidden md:flex items-center gap-1 bg-slate-950/80 p-1 rounded border border-slate-800">
           <button
             onClick={() => onEffectModeChange("highlight")}
@@ -262,7 +262,7 @@ export default function CommandDock({
           </button>
         </div>
 
-        {/* Calibrations toggle */}
+        {/* settings toggle */}
         <button
           onClick={() => setShowConfig(!showConfig)}
           title="Adjust detection thresholds"
@@ -276,7 +276,7 @@ export default function CommandDock({
         </button>
       </div>
 
-      {/* Preset Quick Query Chips */}
+      {/* preset buttons */}
       <div className="flex items-center gap-2 overflow-x-auto max-w-full px-2 py-0.5">
         <span className="text-[9px] font-mono text-slate-400 uppercase tracking-widest hidden sm:inline">
           PROMPTS:

@@ -1,8 +1,5 @@
 """
-STARK VISION — Target State Machine.
-
-Manages deterministic state transitions between voice grounding, SAM 2 tracking,
-ambiguity resolution, and recovery.
+Target state machine tracking search, lock-on, tracking, and recovery states.
 """
 
 from __future__ import annotations
@@ -16,9 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class TargetStateMachine:
-    """
-    Deterministic finite state machine governing visual target tracking lifecycle.
-    """
+    # tracks target lifecycle between searching, locked, and recovery
 
     def __init__(self, recovery_confidence_threshold: float = 0.40) -> None:
         self.state = TargetState.IDLE

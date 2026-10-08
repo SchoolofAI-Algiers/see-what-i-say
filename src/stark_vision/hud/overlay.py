@@ -1,17 +1,6 @@
 """
-STARK VISION — JarvisHUD Engine (Mark LXXXV Tactical Augmented Reality).
-
-Provides high-tech Marvel Iron Man / Mark LXXXV tactical augmented reality
-overlays using pure OpenCV (cv2), NumPy, and TrueType Typography (Orbitron & JetBrains Mono).
-
-Features:
-- True 3D rotating holographic Arc Reactor gyroscope with depth perspective
-- Floating split aerospace telemetry capsules (no heavy black blocks)
-- TrueType Typography using Orbitron-Bold (Marvel Iron Man font) and JetBrains Mono
-- Intelligent target reticles with adaptive crosshair positioning
-- Multi-pass holographic glow bloom and laser scanline sweeps
-- Floating cyber-chamfered command console dock with on-screen keyboard input
-- 2.5-second cinematic suit diagnostic boot sequence with spoken audio greeting
+OpenCV HUD drawing routines for live camera feed.
+Renders target bounding boxes, telemetry badges, and bottom prompt bar over frames.
 """
 
 from __future__ import annotations
@@ -26,14 +15,14 @@ import numpy as np
 from stark_vision.hud.geometry_3d import draw_3d_arc_reactor
 from stark_vision.hud.typography import blit_text
 
-# BGR Design Tokens (Iron Man / Arc Reactor Hologram Palette)
-ARC_CYAN = (255, 240, 0)          # Primary electric hologram cyan
-PLASMA_BLUE = (255, 144, 30)       # Deep secondary hologram blue
-STARK_GOLD = (0, 191, 255)         # Mark 85 armor gold
-CRIMSON_REPULSOR = (42, 42, 255)   # Alert crimson red
-OBSIDIAN_GLASS = (20, 14, 10)      # Dark translucent backing
-HUD_WHITE = (250, 248, 245)        # High-contrast typography
-HUD_GRAY = (160, 160, 160)         # Subtle secondary telemetry
+# BGR color values for hud widgets
+ARC_CYAN = (255, 240, 0)          # cyan accent
+PLASMA_BLUE = (255, 144, 30)       # secondary blue
+STARK_GOLD = (0, 191, 255)         # gold warning/secondary
+CRIMSON_REPULSOR = (42, 42, 255)   # red alert
+OBSIDIAN_GLASS = (20, 14, 10)      # dark panel bg
+HUD_WHITE = (250, 248, 245)        # text color
+HUD_GRAY = (160, 160, 160)         # muted text
 
 try:
     from stark_vision.speech.jarvis_voice import play_startup_greeting
@@ -42,22 +31,13 @@ except ImportError:
 
 
 class JarvisHUD:
-    """
-    High-performance, sci-fi augmented reality HUD overlay engine.
-    """
+    # renders cv2 graphic elements over raw webcam frames
 
     def __init__(
         self,
         target_resolution: tuple[int, int] = (640, 480),
         enable_voice: bool = True,
     ) -> None:
-        """
-        Initialize the HUD engine.
-
-        Args:
-            target_resolution: Default (width, height) for telemetry scaling.
-            enable_voice: Whether to play the JARVIS voice greeting on boot.
-        """
         self.default_w, self.default_h = target_resolution
         self.enable_voice = enable_voice
         self.voice_played = False
@@ -66,7 +46,7 @@ class JarvisHUD:
         self.is_booted = False
 
     def reset_boot(self) -> None:
-        """Reset the boot sequence timer."""
+        # resets startup sequence state
         self.boot_start_time = None
         self.is_booted = False
         self.voice_played = False
@@ -131,9 +111,7 @@ class JarvisHUD:
         center: tuple[int, int],
         radius: float = 24.0,
     ) -> None:
-        """
-        Draw animated rotating 3D Arc Reactor gyroscope.
-        """
+        # spinning ring gyroscope animation
         draw_3d_arc_reactor(frame, center=center, frame_count=self.frame_count, base_radius=radius)
 
     def _draw_voice_waveform(
@@ -142,9 +120,7 @@ class JarvisHUD:
         center: tuple[int, int],
         is_active: bool = False,
     ) -> None:
-        """
-        Draw animated acoustic frequency spectrum bars (JARVIS speech wave).
-        """
+        # vertical spectrum bars for audio status
         cx, cy = center
         num_bars = 13
         spacing = 5
@@ -175,10 +151,7 @@ class JarvisHUD:
         index: int,
         color: tuple[int, int, int] = ARC_CYAN,
     ) -> None:
-        """
-        Draw tactical Iron Man target lock reticle, chamfered brackets,
-        sweeping laser scanline, and TrueType telemetry badge.
-        """
+        # draws corner brackets and label tag on tracked object
         h_frame, w_frame = frame.shape[:2]
         x1 = max(0, min(w_frame - 1, int(candidate.x1)))
         y1 = max(0, min(h_frame - 1, int(candidate.y1)))
@@ -288,10 +261,7 @@ class JarvisHUD:
         box_threshold: float,
         fps: float,
     ) -> None:
-        """
-        Render floating holographic telemetry capsules (left, center, right)
-        without blocking the camera view with a heavy banner.
-        """
+        # renders top widgets for framerate, latency and status
         h, w = frame.shape[:2]
 
         # --- LEFT CAPSULE: 3D Arc Reactor & Stark OS Branding ---
@@ -406,9 +376,7 @@ class JarvisHUD:
         search_buffer: str,
         status_msg: str,
     ) -> None:
-        """
-        Render bottom holographic search console dock with cyber chamfers and Orbitron font.
-        """
+        # bottom prompt text bar with keyboard input display
         h, w = frame.shape[:2]
         bar_h = 62
         y_top = h - bar_h - 10
@@ -469,9 +437,7 @@ class JarvisHUD:
         )
 
     def _draw_screen_visor_flourishes(self, frame: np.ndarray) -> None:
-        """
-        Draw high-tech corner flourishes and subtle perimeter visor frame.
-        """
+        # border edge brackets for visor look
         h, w = frame.shape[:2]
         c_len = 22
 
@@ -531,12 +497,7 @@ class JarvisHUD:
         blit_text(frame, "SYNC: ACTIVE", (rx + 8, ry + 30), font_name="mono", size=9, bgr_color=STARK_GOLD)
 
     def render_boot_sequence(self, frame: np.ndarray) -> bool:
-        """
-        Play animated 2.5-second JARVIS diagnostic startup sequence.
-
-        Returns:
-            True if boot is complete, False while boot animation is actively running.
-        """
+        # returns True when the 2.5s startup intro finishes playing
         if self.is_booted:
             return True
 
@@ -617,23 +578,7 @@ class JarvisHUD:
         ambiguous: bool = False,
         status_msg: str = "Ready",
     ) -> np.ndarray:
-        """
-        Main public interface: Render the full tactical HUD over a camera frame.
-
-        Args:
-            frame: OpenCV BGR image array (modified in place).
-            candidates: Sequence of GroundingCandidate instances.
-            search_buffer: Live query text currently in the search bar.
-            active_prompt: Locked prompt currently evaluated by the model.
-            box_threshold: Detection sensitivity threshold.
-            latency_ms: Inference forward pass latency in ms.
-            fps: Live video frame rate.
-            ambiguous: Whether candidate ambiguity alert is active.
-            status_msg: Short status string for the console chip.
-
-        Returns:
-            Annotated frame.
-        """
+        # main drawing pipeline per frame: reticles, widgets, and console
         self.frame_count += 1
 
         # 1. Visor Screen Flourishes & Marginal Rails

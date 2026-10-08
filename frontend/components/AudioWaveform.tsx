@@ -64,7 +64,7 @@ export default function AudioWaveform({
       startAudio();
     }
 
-    // Render loop
+    // draw frame
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -89,7 +89,7 @@ export default function AudioWaveform({
         const dataArray = new Uint8Array(bufferLength);
         analyserRef.current.getByteFrequencyData(dataArray);
 
-        // Compute RMS level
+        // calculate average energy level
         let sum = 0;
         for (let i = 0; i < bufferLength; i++) {
           sum += dataArray[i];
@@ -105,11 +105,11 @@ export default function AudioWaveform({
           const x = i * (barWidth + gap);
           const y = height / 2 - barHeight / 2;
 
-          // Dual-tone Gradient
+          // vertical gradient
           const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-          gradient.addColorStop(0, "#FFBF00"); // Stark Gold top
-          gradient.addColorStop(0.5, "#00F5FF"); // Cyan center
-          gradient.addColorStop(1, "#FFBF00"); // Stark Gold bottom
+          gradient.addColorStop(0, "#FFBF00");
+          gradient.addColorStop(0.5, "#00F5FF");
+          gradient.addColorStop(1, "#FFBF00");
 
           ctx.fillStyle = gradient;
           ctx.shadowColor = isRecording ? "#FFBF00" : "#00F5FF";
@@ -117,7 +117,7 @@ export default function AudioWaveform({
           ctx.fillRect(x, y, barWidth, barHeight);
         }
       } else {
-        // Ambient idle breathing pattern
+        // idle wave when mic is inactive
         setRmsLevel(isRecording ? 45 : 12);
         for (let i = 0; i < barCount; i++) {
           const centerDist = Math.abs(i - barCount / 2) / (barCount / 2);

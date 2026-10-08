@@ -1,13 +1,8 @@
 """
-STARK VISION — Industrial Grounding Engine.
+Grounding DINO wrapper for referring expression grounding on camera frames.
 
-Production-grade Grounding DINO wrapper for multimodal referring video segmentation.
-Engineered with:
-- Dynamic Adaptive Thresholding (DAT) eliminating hardcoded constants
-- FP16 Tensor Core acceleration on CUDA hardware
-- IoU-aware candidate deduplication and spatial disambiguation
-- Temporal One-Euro filter for jitter-free tracking
-- Robust lexical normalization protecting abbreviations and decimals
+Runs inference with fp16 autocasting, cleans up speech assistant filler words,
+and deduplicates candidate boxes before returning them to the UI or tracker.
 """
 
 from __future__ import annotations
@@ -39,15 +34,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class GroundingCandidate:
-    """
-    Immutable representation of a grounded visual object candidate.
-
-    Attributes:
-        box: Coordinates [x1, y1, x2, y2] in absolute display pixels.
-        score: Multimodal alignment confidence score in [0.0, 1.0].
-        label: The matched referring expression phrase.
-    """
-
+    # candidate detection with pixel box [x1, y1, x2, y2], confidence, and text label
     box: tuple[float, float, float, float]
     score: float
     label: str
@@ -86,9 +73,7 @@ class GroundingCandidate:
 
 
 class Grounder:
-    """
-    Industrial-grade Grounding DINO wrapper for referring expression visual grounding.
-    """
+    # loads grounding dino weights and runs visual phrase grounding on camera frames
 
     def __init__(
         self,
@@ -139,15 +124,7 @@ class Grounder:
 
     @staticmethod
     def _normalize_prompt(text: str) -> str:
-        """
-        Industrial lexical normalizer for Grounding DINO BERT tokenizer.
-
-        Protects:
-        - Decimals (e.g. '3.5 mm' -> not split on '.')
-        - Honorifics / titles ('mr.', 'dr.')
-        - Strips conversational speech preambles ('can you track the', 'please highlight')
-        - Appends trailing '.' required by token classification head
-        """
+        # cleans conversational assistant prefixes and preserves periods in numbers like 3.5mm
         cleaned = text.strip().lower()
         if not cleaned:
             return "."
@@ -186,11 +163,7 @@ class Grounder:
         box_threshold: float | None = None,
         text_threshold: float | None = None,
     ) -> list[GroundingCandidate]:
-        """
-        Ground a text query into bounding box candidates within a camera frame.
-
-        Dynamically calculates thresholds if not explicitly provided.
-        """
+        # grounds text query on frame and returns deduplicated boxes
         if frame_bgr is None or frame_bgr.size == 0:
             raise ValueError("Input frame_bgr cannot be None or empty.")
 

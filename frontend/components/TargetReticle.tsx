@@ -52,7 +52,7 @@ export default function TargetReticle({
         height,
       }}
     >
-      {/* Recolor Mode Overlay */}
+      {/* recolor mode tint */}
       {effectMode === "recolor" && (
         <div
           className="absolute inset-0 rounded-sm pointer-events-none transition-all duration-300"
@@ -63,7 +63,7 @@ export default function TargetReticle({
         />
       )}
 
-      {/* Outer Cyan Chamfered Brackets */}
+      {/* corner brackets */}
       <div className="absolute inset-0 border border-stark-cyan/40 pointer-events-none">
         {/* Top-Left Bracket */}
         <div className="absolute -top-1 -left-1 w-6 h-6 border-t-2 border-l-2 border-stark-cyan shadow-[0_0_10px_#00F5FF]" />
@@ -82,16 +82,16 @@ export default function TargetReticle({
         <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 border-b border-r border-stark-gold" />
       </div>
 
-      {/* Animated Horizontal Laser Sweep Line */}
+      {/* laser sweep line */}
       <div className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-stark-cyan to-transparent animate-laser-sweep pointer-events-none opacity-80 shadow-[0_0_8px_#00F5FF]" />
 
-      {/* Center Micro Crosshair */}
+      {/* center crosshair */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none flex items-center justify-center opacity-60">
         <div className="w-full h-[1px] bg-stark-gold/70" />
         <div className="h-full w-[1px] bg-stark-gold/70 absolute" />
       </div>
 
-      {/* Floating Header Tag: Label & Confidence */}
+      {/* label and confidence tag */}
       <div className="absolute -top-8 left-0 flex items-center gap-2 pointer-events-none whitespace-nowrap">
         <div className="hud-glass px-2.5 py-0.5 flex items-center gap-1.5 border-l border-l-stark-gold">
           <span className="w-1.5 h-1.5 rounded-full bg-stark-gold animate-ping" />
@@ -103,7 +103,7 @@ export default function TargetReticle({
           </span>
         </div>
 
-        {/* Ambiguity Alert Badge if triggered */}
+        {/* ambiguity warning */}
         {detection.isAmbiguous && (
           <div className="hud-glass bg-stark-crimson/20 border-stark-crimson px-2 py-0.5 flex items-center gap-1 text-[9px] font-orbitron text-stark-crimson text-glow-crimson uppercase animate-bounce">
             <span>⚠️</span> AMBIGUOUS TARGET
@@ -111,7 +111,7 @@ export default function TargetReticle({
         )}
       </div>
 
-      {/* Floating Footer Tag: Distance & Coordinates */}
+      {/* distance / position tag */}
       <div className="absolute -bottom-6 right-0 flex items-center gap-2 pointer-events-none whitespace-nowrap">
         <div className="hud-glass px-2 py-0.5 flex items-center gap-2 text-[9px] font-mono text-slate-300">
           <span>RANGE: <strong className="text-stark-cyan">{distanceEst}</strong></span>

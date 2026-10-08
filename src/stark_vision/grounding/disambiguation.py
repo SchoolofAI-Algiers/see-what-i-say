@@ -1,11 +1,8 @@
 """
-STARK VISION — Multi-Dimensional Ambiguity Resolver & Spatial Disambiguator.
+Handles spatial disambiguation and duplicate box filtering.
 
-Replaces basic delta heuristics with spatial intelligence:
-1. Center-Distance + Containment (IoMin) clustering: Merges multiple proposal boxes
-   wrapping the exact same object while preserving distinct adjacent targets in crowds.
-2. Directional spatial reasoning: Resolves "left", "right", "nearest", "center", "top", "bottom".
-3. Conversational clarification question generator for true multi-instance ambiguity.
+Clusters overlapping proposals for the same object and sorts candidates
+when the prompt mentions directional cues like left, right, top or nearest.
 """
 
 from __future__ import annotations
@@ -18,8 +15,7 @@ from typing import Sequence
 
 @dataclass(frozen=True)
 class SpatialCandidate:
-    """Internal candidate representation with normalized coordinates."""
-
+    # bounding box and score container
     box: tuple[float, float, float, float]  # [x1, y1, x2, y2]
     score: float
     label: str
@@ -43,7 +39,7 @@ def compute_iou(
     box_a: tuple[float, float, float, float],
     box_b: tuple[float, float, float, float],
 ) -> float:
-    """Compute Intersection over Union (IoU)."""
+    # standard intersection over union
     x1 = max(box_a[0], box_b[0])
     y1 = max(box_a[1], box_b[1])
     x2 = min(box_a[2], box_b[2])
@@ -61,7 +57,7 @@ def compute_iomin(
     box_a: tuple[float, float, float, float],
     box_b: tuple[float, float, float, float],
 ) -> float:
-    """Compute Intersection over Minimum Area (Containment Index)."""
+    # intersection over minimum area (containment metric)
     x1 = max(box_a[0], box_b[0])
     y1 = max(box_a[1], box_b[1])
     x2 = min(box_a[2], box_b[2])
@@ -74,9 +70,7 @@ def compute_iomin(
 
 
 class SpatialResolver:
-    """
-    Industrial spatial disambiguation engine for multimodal referring expressions.
-    """
+    # maps various prompt keywords to canonical directional tokens
 
     SPATIAL_KEYWORDS = {
         "left": "left",
@@ -121,21 +115,13 @@ class SpatialResolver:
         iou_threshold: float = 0.55,
         containment_threshold: float = 0.70,
     ) -> bool:
-        """
-        Determine if two proposal boxes belong to the same physical object.
-
-        Checks:
-        1. High IoU (> 0.55), OR
-        2. High Containment (IoMin > 0.70) with small center offset.
-        This preserves adjacent distinct targets in crowds while merging duplicate proposals.
-        """
+        # checks if two boxes overlap heavily or one is contained inside another
         iou = compute_iou(cand_a.box, cand_b.box)
         if iou >= iou_threshold:
             return True
 
         iomin = compute_iomin(cand_a.box, cand_b.box)
         if iomin >= containment_threshold:
-            # Check center distance
             dist = math.hypot(cand_a.center_x - cand_b.center_x, cand_a.center_y - cand_b.center_y)
             avg_diag = math.sqrt(cand_a.area + cand_b.area)
             if dist < 0.35 * avg_diag:
@@ -149,7 +135,7 @@ class SpatialResolver:
         candidates: Sequence[SpatialCandidate],
         iou_threshold: float = 0.55,
     ) -> list[SpatialCandidate]:
-        """Deduplicate candidates belonging to the same physical object."""
+        # non-maximum style suppression to remove duplicate anchor hits
         if len(candidates) <= 1:
             return list(candidates)
 
@@ -173,12 +159,7 @@ class SpatialResolver:
         text_prompt: str,
         delta_threshold: float = 0.15,
     ) -> tuple[bool, list[SpatialCandidate], str | None]:
-        """
-        Evaluate and optionally resolve candidate ambiguity using spatial reasoning.
-
-        Returns:
-            (is_ambiguous, resolved_candidates, clarification_message)
-        """
+        # checks whether multiple candidates need clarification or directional resolution
         if not candidates:
             return False, [], None
 

@@ -1,8 +1,8 @@
 """
-STARK VISION — Target Manager with Rate-Decoupled Scheduling.
+Tracks active target lifecycle across SAM 2 and Grounding DINO.
 
-Coordinates between asynchronous Grounding DINO (1-2 Hz / voice events)
-and real-time SAM 2 mask tracking (30 FPS) within RTX 4060 GPU budget.
+Runs SAM 2 tracking each frame while rate limiting heavy Grounding DINO
+passes so the laptop GPU doesn't choke on concurrent transformer inference.
 """
 
 from __future__ import annotations
@@ -17,9 +17,8 @@ from stark_vision.target.target_state import TargetState
 
 @dataclass
 class TrackedTarget:
-    """Active target metadata and spatial state."""
-
-    box: tuple[float, float, float, float]  # [x1, y1, x2, y2]
+    # bounding box cooridnates [x1, y1, x2, y2] normalized
+    box: tuple[float, float, float, float]
     confidence: float
     label: str
     mask: object | None = None
@@ -27,18 +26,11 @@ class TrackedTarget:
 
 
 class TargetManager:
-    """
-    Orchestrates target tracking lifecycle with rate decoupling.
-
-    Enforces:
-    - SAM 2 runs at 30 FPS for high-rate continuous mask tracking.
-    - Grounding DINO runs at 1-2 Hz (or on-demand upon voice command / recovery),
-      preserving 8 GB VRAM and computational headroom on laptop GPUs.
-    """
+    # keeps tracker state and throttles heavy DINO detection calls
 
     def __init__(
         self,
-        grounding_cadence_sec: float = 0.50,  # 2 Hz re-verification
+        grounding_cadence_sec: float = 0.50,  # default 2hz re-check cadance
         recovery_threshold: float = 0.40,
     ) -> None:
         self.grounding_cadence_sec = grounding_cadence_sec
@@ -51,30 +43,21 @@ class TargetManager:
         return self.fsm.state
 
     def set_query(self, prompt: str) -> None:
-        """Triggered when a new voice or text referring expression arrives."""
+        # resets target state when user gives a new speech or text prompt
         self.fsm.trigger_query(prompt)
         self.current_target = None
-        # Force immediate grounding on next frame
         self._last_grounding_time = 0.0
 
     def should_run_grounding(self, current_time: float | None = None) -> bool:
-        """
-        Rate Decoupling Scheduler.
-
-        Returns True if Grounding DINO should run on the current frame.
-        Returns False if SAM 2 tracking alone is sufficient, saving GPU cycles.
-        """
+        # checks if we need a full detector pass or can stay on lightweight tracker
         now = current_time if current_time is not None else time.perf_counter()
 
-        # 1. Searching or Recovery requires immediate grounding
         if self.state in (TargetState.SEARCHING, TargetState.RECOVERY):
             return True
 
-        # 2. Ambiguous requires user clarification before new visual pass
         if self.state in (TargetState.AMBIGUOUS, TargetState.IDLE):
             return False
 
-        # 3. In active TRACKING state, run grounding at low cadence (1-2 Hz) for re-verification
         if self.state == TargetState.TRACKING:
             return (now - self._last_grounding_time) >= self.grounding_cadence_sec
 
@@ -91,7 +74,7 @@ class TargetManager:
         label: str,
         current_time: float | None = None,
     ) -> None:
-        """Update active target coordinates and confidence."""
+        # store bbox and start tracking transition
         now = current_time if current_time is not None else time.perf_counter()
         self.current_target = TrackedTarget(
             box=box,
@@ -102,7 +85,7 @@ class TargetManager:
         self.fsm.on_tracking_started()
 
     def on_tracker_step(self, confidence: float, box: tuple[float, float, float, float]) -> None:
-        """High-frequency per-frame update from SAM 2 (at 30 FPS)."""
+        # called on each fast tracker frame to keep position current
         self.fsm.on_tracker_frame(confidence)
         if self.current_target is not None:
             self.current_target.confidence = confidence
@@ -110,7 +93,7 @@ class TargetManager:
             self.current_target.last_updated = time.perf_counter()
 
     def reset(self) -> None:
-        """Reset target manager to IDLE."""
+        # drops active track and sets fsm back to IDLE
         self.fsm.reset()
         self.current_target = None
         self._last_grounding_time = 0.0

@@ -22,7 +22,7 @@ export default function TelemetryRail({
 }: TelemetryRailProps) {
   const [pulse, setPulse] = useState(72);
 
-  // Simulated bio pulse variation
+  // slight pulse jitter for ui liveliness
   useEffect(() => {
     const interval = setInterval(() => {
       setPulse(70 + Math.floor(Math.random() * 5));
@@ -36,7 +36,7 @@ export default function TelemetryRail({
     <div
       className={`hud-glass clip-chamfer-tr p-3.5 flex flex-col gap-2.5 border-r-2 border-r-stark-cyan ${className}`}
     >
-      {/* Header Diagnostic */}
+      {/* header */}
       <div className="flex items-center justify-between gap-4 border-b border-stark-cyan/20 pb-1.5">
         <div className="flex items-center gap-1.5">
           <ShieldCheck className="w-4 h-4 text-stark-gold" />
@@ -49,9 +49,8 @@ export default function TelemetryRail({
         </span>
       </div>
 
-      {/* Grid of Diagnostics */}
+      {/* metrics grid */}
       <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-        {/* Connection status */}
         <div className="flex items-center gap-1.5">
           <Wifi
             className={`w-3.5 h-3.5 ${
@@ -70,7 +69,7 @@ export default function TelemetryRail({
           </div>
         </div>
 
-        {/* Viewport FPS */}
+        {/* fps counter */}
         <div className="flex items-center gap-1.5">
           <Activity className="w-3.5 h-3.5 text-stark-gold" />
           <div className="flex flex-col">
@@ -81,7 +80,7 @@ export default function TelemetryRail({
           </div>
         </div>
 
-        {/* Inference Latency */}
+        {/* detector latency */}
         <div className="flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5 text-stark-cyan" />
           <div className="flex flex-col">
@@ -92,7 +91,7 @@ export default function TelemetryRail({
           </div>
         </div>
 
-        {/* GPU VRAM Telemetry */}
+        {/* vram usage */}
         <div className="flex items-center gap-1.5">
           <Cpu className="w-3.5 h-3.5 text-stark-gold" />
           <div className="flex flex-col">
@@ -104,7 +103,7 @@ export default function TelemetryRail({
         </div>
       </div>
 
-      {/* VRAM / Compute Bar */}
+      {/* memory bar */}
       <div className="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden border border-slate-700">
         <div
           className="h-full bg-gradient-to-r from-stark-cyan to-stark-gold"
@@ -112,7 +111,7 @@ export default function TelemetryRail({
         />
       </div>
 
-      {/* Footer bio telemetry */}
+      {/* footer status */}
       <div className="flex items-center justify-between text-[9px] font-mono text-slate-400 pt-1 border-t border-slate-800">
         <span className="flex items-center gap-1">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-stark-gold animate-pulse" />

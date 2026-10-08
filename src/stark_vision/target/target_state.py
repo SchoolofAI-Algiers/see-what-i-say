@@ -1,8 +1,6 @@
 """
-STARK VISION — Target State Representation.
-
-Defines lifecycle states for referring video segmentation targets:
-SEARCHING -> GROUNDED -> TRACKING -> AMBIGUOUS -> RECOVERY / LOST.
+States for refering object tracking pipeline.
+Cycles between searching, grounded, active tracking, and recovery when lost.
 """
 
 from __future__ import annotations
@@ -11,7 +9,7 @@ from enum import Enum, auto
 
 
 class TargetState(str, Enum):
-    """Target lifecycle states in real-time referring tracking."""
+    # lifecycle states for target tracking
 
     IDLE = "IDLE"
     SEARCHING = "SEARCHING"

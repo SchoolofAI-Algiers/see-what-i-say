@@ -52,7 +52,7 @@ export default function CommandConsoleHUD({
 }: CommandConsoleHUDProps) {
   const [activeTab, setActiveTab] = useState<"none" | "effects" | "cfg">("none");
 
-  // Debounced auto-grounding: triggers search 600ms after user stops typing
+  // fire auto search 600ms after user finishes typng
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 3) return;
@@ -64,7 +64,7 @@ export default function CommandConsoleHUD({
     return () => clearTimeout(timer);
   }, [query, onSubmitQuery]);
 
-  // Global Keyboard Shortcuts
+  // keyboard shorcuts for quick toggling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -103,7 +103,7 @@ export default function CommandConsoleHUD({
 
   return (
     <div className={`flex flex-col items-center gap-2 select-none ${className}`}>
-      {/* 1. Permanent Glowing Referring Expression Command Center */}
+      {/* prompt input bar */}
       <div className="bg-[#070e1b]/95 border border-stark-gold/70 rounded-xl px-4 py-2.5 max-w-2xl w-full backdrop-blur-xl shadow-[0_0_25px_rgba(255,191,0,0.2)] flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
@@ -140,7 +140,7 @@ export default function CommandConsoleHUD({
           </button>
         </div>
 
-        {/* Tactical Lock Status Banner & Preset Chips */}
+        {/* preset chip buttons */}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[9px] font-orbitron font-bold text-slate-400 uppercase tracking-wider mr-0.5">
@@ -164,7 +164,7 @@ export default function CommandConsoleHUD({
             ))}
           </div>
 
-          {/* Tactical Feedback Status Badge */}
+          {/* status badge */}
           <div className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider shrink-0">
             {scanStatus === "SCANNING" && (
               <span className="text-stark-gold text-glow-gold animate-pulse flex items-center gap-1">
@@ -188,7 +188,7 @@ export default function CommandConsoleHUD({
         </div>
       </div>
 
-      {/* 2. Expandable Panel for Effects & Configurations */}
+      {/* settings panel */}
       {activeTab !== "none" && (
         <div className="bg-[#070e1b]/95 border border-stark-gold/60 rounded-lg p-3 max-w-2xl w-full backdrop-blur-xl shadow-[0_0_20px_rgba(255,191,0,0.2)] animate-in fade-in duration-150">
           {activeTab === "cfg" && (
@@ -273,7 +273,7 @@ export default function CommandConsoleHUD({
         </div>
       )}
 
-      {/* 3. Main Chiseled Gold Cockpit Chin Console */}
+      {/* bottom toolbar */}
       <div className="relative bg-[#070e1b]/95 border-2 border-stark-gold rounded-t-xl px-6 py-2.5 flex flex-col items-center gap-2 shadow-[0_0_30px_rgba(255,191,0,0.25)]">
         <div className="absolute inset-1 border border-stark-cyan/40 rounded-t-lg pointer-events-none" />
 
@@ -282,7 +282,6 @@ export default function CommandConsoleHUD({
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Glowing Mic Push-to-Talk Button */}
           <button
             onClick={onToggleRecording}
             className={`p-2.5 rounded-lg border flex items-center justify-center transition-all ${
@@ -299,7 +298,6 @@ export default function CommandConsoleHUD({
             )}
           </button>
 
-          {/* [ SCAN ] */}
           <button
             onClick={() => onSubmitQuery(query)}
             className="px-4 py-2 bg-slate-900/80 border border-stark-cyan/60 hover:border-stark-cyan hover:bg-stark-cyan/20 text-stark-cyan font-orbitron text-[11px] font-bold tracking-wider rounded uppercase transition-all shadow-[0_0_10px_rgba(0,245,255,0.15)]"
@@ -307,7 +305,6 @@ export default function CommandConsoleHUD({
             SCAN
           </button>
 
-          {/* [ WEAPONS / EFFECTS ] */}
           <button
             onClick={() => setActiveTab(activeTab === "effects" ? "none" : "effects")}
             className={`px-4 py-2 border font-orbitron text-[11px] font-bold tracking-wider rounded uppercase transition-all ${
@@ -319,7 +316,6 @@ export default function CommandConsoleHUD({
             EFFECTS
           </button>
 
-          {/* [ HUD CFG ] */}
           <button
             onClick={() => setActiveTab(activeTab === "cfg" ? "none" : "cfg")}
             className={`px-4 py-2 border font-orbitron text-[11px] font-bold tracking-wider rounded uppercase flex items-center gap-1 transition-all ${

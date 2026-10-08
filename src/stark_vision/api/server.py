@@ -1,10 +1,6 @@
 """
-STARK VISION - FastAPI Hybrid Streaming & Grounding Service.
-
-Decouples camera ingestion and model execution:
-- Python captures native webcam at 30 FPS via CameraManager (buffer size 1).
-- Serves low-overhead MJPEG stream at /api/video_feed.
-- Executes Grounding DINO Base on-demand via WebSocket or REST.
+FastAPI server exposing mjpeg video feed and websocket grounding endpoint.
+Pipes webcam frames to the browser and runs model inference on demand.
 """
 
 from __future__ import annotations
@@ -41,7 +37,7 @@ _camera_manager: CameraManager | None = None
 
 
 def get_grounder() -> Grounder:
-    """Retrieve or initialize the Grounding DINO Base engine."""
+    # lazy loader for the grounding dino model
     global _grounder
     if _grounder is None:
         model_id = "IDEA-Research/grounding-dino-base"
@@ -57,7 +53,7 @@ def get_grounder() -> Grounder:
 
 
 def get_camera_manager() -> CameraManager:
-    """Retrieve or initialize the CameraManager singleton."""
+    # global camera worker handle
     global _camera_manager
     if _camera_manager is None:
         _camera_manager = CameraManager(device_id=0, target_width=1280, target_height=720, target_fps=30)

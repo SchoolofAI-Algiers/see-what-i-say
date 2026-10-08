@@ -22,7 +22,7 @@ export default function VisionCanvas({
   const [videoFeedUrl, setVideoFeedUrl] = useState("http://localhost:8000/api/video_feed");
   const [retryKey, setRetryKey] = useState(0);
 
-  // Connect directly to FastAPI on port 8000 to eliminate Node.js dev-server reverse proxy overhead
+  // hit fastapi directly on port 8000
   React.useEffect(() => {
     if (typeof window !== "undefined") {
       const host = window.location.hostname || "localhost";
@@ -30,7 +30,7 @@ export default function VisionCanvas({
     }
   }, []);
 
-  // Self-healing reconnection if camera stream temporarily drops
+  // reconnectng retry if stream drops
   React.useEffect(() => {
     if (streamError) {
       const timer = setTimeout(() => {
@@ -45,7 +45,7 @@ export default function VisionCanvas({
     <div
       className={`relative w-full h-full overflow-hidden bg-stark-obsidian ${className}`}
     >
-      {/* 1. Photorealistic Stark Penthouse Lab Backdrop (active when camera is off or stream error) */}
+      {/* fallback backgroud when cam is offline */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-opacity duration-500 pointer-events-none"
         style={{
@@ -54,7 +54,7 @@ export default function VisionCanvas({
         }}
       />
 
-      {/* 2. Real-Time Python MJPEG Video Stream (30 FPS 16:9 HD, direct from FastAPI) */}
+      {/* mjpeg stream from backend */}
       {cameraActive && !streamError && (
         <img
           key={retryKey}
@@ -72,10 +72,10 @@ export default function VisionCanvas({
         />
       )}
 
-      {/* 3. Subtle Tactical CRT Scanlines & Holographic Grid */}
+      {/* scanline overlay */}
       <div className="absolute inset-0 scanlines opacity-30 pointer-events-none" />
 
-      {/* 4. Visor Edge Chamfer Vignette */}
+      {/* corner vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -84,7 +84,7 @@ export default function VisionCanvas({
         }}
       />
 
-      {/* 5. Mark 85 Tactical HUD Target Reticles (Layered above video feed) */}
+      {/* tracking reticle layer */}
       <div className="absolute inset-0 pointer-events-none z-10">
         {detections.map((detection) => (
           <TargetReticleHUD

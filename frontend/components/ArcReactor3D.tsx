@@ -32,7 +32,7 @@ export default function ArcReactor3D({ className = "" }: ArcReactor3DProps) {
     const reactorGroup = new THREE.Group();
     scene.add(reactorGroup);
 
-    // 1. Center Core Light & Sphere
+    // center core sphere
     const coreGeo = new THREE.SphereGeometry(0.35, 32, 32);
     const coreMat = new THREE.MeshBasicMaterial({
       color: 0x00f5ff,
@@ -42,11 +42,11 @@ export default function ArcReactor3D({ className = "" }: ArcReactor3DProps) {
     const coreSphere = new THREE.Mesh(coreGeo, coreMat);
     reactorGroup.add(coreSphere);
 
-    // Core point light
+    // core point light
     const pointLight = new THREE.PointLight(0x00f5ff, 2.5, 10);
     reactorGroup.add(pointLight);
 
-    // 2. Middle Ring (10 segmented palladium coils)
+    // perimeter coils
     const coilsGroup = new THREE.Group();
     const coilGeo = new THREE.BoxGeometry(0.12, 0.35, 0.15);
     const coilMat = new THREE.MeshStandardMaterial({
@@ -67,7 +67,7 @@ export default function ArcReactor3D({ className = "" }: ArcReactor3DProps) {
     }
     reactorGroup.add(coilsGroup);
 
-    // 3. Inner Glowing Energy Ring
+    // inner wireframe ring
     const innerRingGeo = new THREE.TorusGeometry(0.7, 0.04, 16, 64);
     const innerRingMat = new THREE.MeshBasicMaterial({
       color: 0x00f5ff,
@@ -76,7 +76,7 @@ export default function ArcReactor3D({ className = "" }: ArcReactor3DProps) {
     const innerRing = new THREE.Mesh(innerRingGeo, innerRingMat);
     reactorGroup.add(innerRing);
 
-    // 4. Outer Gold Housing Ring
+    // outer housing ring
     const outerRingGeo = new THREE.TorusGeometry(1.35, 0.08, 16, 64);
     const outerRingMat = new THREE.MeshStandardMaterial({
       color: 0xffbf00,
@@ -86,7 +86,7 @@ export default function ArcReactor3D({ className = "" }: ArcReactor3DProps) {
     const outerRing = new THREE.Mesh(outerRingGeo, outerRingMat);
     reactorGroup.add(outerRing);
 
-    // 5. Angular Nanotech Brackets (Mark 85 chevron accents)
+    // corner brackets
     const bracketGeo = new THREE.TorusGeometry(1.5, 0.02, 8, 3, Math.PI / 3);
     const bracketMat = new THREE.MeshBasicMaterial({
       color: 0x00f5ff,

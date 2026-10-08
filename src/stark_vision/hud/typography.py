@@ -1,8 +1,6 @@
 """
-STARK VISION — High-Performance Cached TrueType Typography Engine.
-
-Renders modern TrueType fonts (Orbitron, JetBrains Mono) with sub-pixel
-anti-aliasing directly onto OpenCV BGR numpy frames using cached alpha blitting.
+Draws cached TrueType fonts directly onto OpenCV BGR frames.
+Pillow renders text chips once into an alpha mask so we avoid font rasterization every frame.
 """
 
 from __future__ import annotations
@@ -25,9 +23,7 @@ def get_font(
     font_name: Literal["orbitron", "mono"] = "orbitron",
     size: int = 14,
 ) -> ImageFont.FreeTypeFont:
-    """
-    Retrieve a cached FreeType font object or load it from disk.
-    """
+    # returns loaded font handle or falls back to default
     key = (font_name, size)
     if key in _FONT_CACHE:
         return _FONT_CACHE[key]
@@ -51,14 +47,12 @@ def _render_chip(
     size: int,
     bgr_color: tuple[int, int, int],
 ) -> tuple[np.ndarray, np.ndarray]:
-    """
-    Render and cache a small RGBA text chip and its normalized alpha mask.
-    """
+    # renders small RGBA text slice and cached alpha mask
     key = (text, font_name, size, bgr_color)
     if key in _CHIP_CACHE:
         return _CHIP_CACHE[key]
 
-    # Limit cache size to 512 entries
+    # limit cache size to prevent memory creep
     if len(_CHIP_CACHE) > 512:
         _CHIP_CACHE.clear()
 
@@ -78,7 +72,7 @@ def _render_chip(
     draw.text((-bbox[0] + 2, -bbox[1] + 2), text, font=font, fill=(r, g, b, 255))
 
     chip_np = np.asarray(chip)
-    # Convert RGB to BGR
+    # convert RGB to BGR
     bgr_chip = chip_np[:, :, :3][:, :, ::-1].copy()
     alpha_chip = (chip_np[:, :, 3:] / 255.0).astype(np.float32)
 
@@ -94,11 +88,7 @@ def blit_text(
     size: int = 14,
     bgr_color: tuple[int, int, int] = (255, 240, 0),
 ) -> None:
-    """
-    Blit anti-aliased TrueType text directly onto a BGR frame with cached alpha blending.
-
-    Executes in $< 0.05\\text{ ms}$ per text string.
-    """
+    # blits rendered text chip over numpy frame slice
     if not text:
         return
 

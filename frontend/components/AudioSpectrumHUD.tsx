@@ -93,7 +93,7 @@ export default function AudioSpectrumHUD({
           const val = freqData[idx] || 10;
           barHeight = Math.max(6, (val / 255) * height * 0.95);
         } else {
-          // Authentic Iron Man idle breathing waveform
+          // idle breathing wave when mic is quiet
           const centerDist = Math.abs(i - barCount / 2) / (barCount / 2);
           const wave =
             Math.sin(tick * 2 + i * 0.35) * 0.45 +
@@ -108,7 +108,7 @@ export default function AudioSpectrumHUD({
 
         const x = startX + i * (barWidth + gap);
 
-        // Segmented LED blocks effect
+        // draw segmented bars
         const segmentCount = Math.floor(barHeight / 5);
         for (let s = 0; s < segmentCount; s++) {
           const segY = height - (s + 1) * 5;
@@ -133,17 +133,14 @@ export default function AudioSpectrumHUD({
     <div
       className={`flex flex-col items-center gap-1 select-none pointer-events-auto ${className}`}
     >
-      {/* Upper Flanking Brackets & Wings */}
       <div className="flex items-center gap-2">
-        {/* Left Wing Line */}
         <div className="w-10 h-[1.5px] bg-gradient-to-r from-transparent to-stark-cyan opacity-80" />
 
-        {/* Left Angular Bracket */}
         <div className="font-orbitron text-stark-gold text-sm font-bold text-glow-gold">
           &#123;
         </div>
 
-        {/* Equalizer Canvas */}
+        {/* waveform canvas */}
         <canvas
           ref={canvasRef}
           width={240}
@@ -151,12 +148,10 @@ export default function AudioSpectrumHUD({
           className="w-[220px] h-[36px]"
         />
 
-        {/* Right Angular Bracket */}
         <div className="font-orbitron text-stark-gold text-sm font-bold text-glow-gold">
           &#125;
         </div>
 
-        {/* Right Wing Line */}
         <div className="w-10 h-[1.5px] bg-gradient-to-l from-transparent to-stark-cyan opacity-80" />
       </div>
 

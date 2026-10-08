@@ -1,15 +1,8 @@
 """
-STARK VISION — Scale-Invariant Centroid-Log-Scale One-Euro ($1€$) Bounding Box Filter.
+Temporal smoothing for bounding box tracking across frames.
 
-Eliminates frame-to-frame bounding box jitter from camera noise while
-maintaining zero perceptual latency during rapid target translation.
-
-Hardened Production Features:
-1. Centroid + Log-Dimension State Space (cx, cy, log w, log h): Preserves aspect
-   ratio during camera zoom and decouples spatial tracking from scale dynamics.
-2. Resolution-Invariant Parameterization: Coordinates normalized to [0, 1].
-3. Scene-Cut & Collapse Detection: Automatically resets filter state upon large
-   spatial discontinuity or target re-identification to prevent ghost blending.
+Uses a 1-euro filter on centroid and log-scale dimensions to damp
+high-frequency jitter when stationary while tracking quick motions without lag.
 """
 
 from __future__ import annotations
@@ -20,8 +13,7 @@ from typing import Sequence
 
 
 class LowPassFilter:
-    """First-order low-pass exponential smoothing filter."""
-
+    # simple exponential lowpass
     def __init__(self, alpha: float = 0.5) -> None:
         self.alpha = alpha
         self.s: float | None = None
@@ -38,9 +30,7 @@ class LowPassFilter:
 
 
 class OneEuroFilter:
-    """
-    Adaptive frequency One-Euro filter for a single continuous dimension (Casiez et al., CHI 2012).
-    """
+    # single axis 1-euro filter adjusting cutoff based on speed
 
     def __init__(
         self,
@@ -89,12 +79,7 @@ class OneEuroFilter:
 
 
 class BoxTemporalFilter:
-    """
-    Synchronized 4-channel One-Euro filter operating in Centroid-Log-Scale space.
-
-    Filters (center_x, center_y, log(width), log(height)) to eliminate jitter,
-    preserve rectangular aspect ratio, and handle sudden scene cuts.
-    """
+    # filters (center_x, center_y, log_w, log_h) to stop reticle jitter on video frames
 
     def __init__(
         self,

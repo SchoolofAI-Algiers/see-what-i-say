@@ -37,7 +37,7 @@ export default function HelmetVisorFrame() {
           </filter>
         </defs>
 
-        {/* 1. TOP BROW VISOR ARMOR PLATE */}
+        {/* top visor frame */}
         <polygon
           points="
             0,0 1920,0 1920,45 
@@ -50,7 +50,6 @@ export default function HelmetVisorFrame() {
           "
           fill="url(#armorGradient)"
         />
-        {/* Brow Bevel Edge (Cyan) */}
         <polyline
           points="
             0,45 260,45 400,30 660,50 800,70 960,82 1120,70 1260,50 1520,30 1660,45 1920,45
@@ -61,7 +60,6 @@ export default function HelmetVisorFrame() {
           opacity="0.95"
           filter="url(#cyanGlow)"
         />
-        {/* Brow Secondary Gold Accent Line */}
         <polyline
           points="
             40,36 260,36 400,22 660,42 800,62 960,74 1120,62 1260,42 1520,22 1660,36 1880,36
@@ -73,7 +71,7 @@ export default function HelmetVisorFrame() {
           filter="url(#goldGlow)"
         />
 
-        {/* 2. LEFT CHEEK VISOR ARMOR CANOPY */}
+        {/* left border canopy */}
         <polygon
           points="
             0,0 260,45 
@@ -84,7 +82,6 @@ export default function HelmetVisorFrame() {
           "
           fill="url(#armorGradient)"
         />
-        {/* Left Cheek Inner Contour Edge */}
         <polyline
           points="
             260,45 190,160 270,380 180,550 270,750 180,920 320,1010
@@ -105,7 +102,7 @@ export default function HelmetVisorFrame() {
           opacity="0.8"
         />
 
-        {/* 3. RIGHT CHEEK VISOR ARMOR CANOPY */}
+        {/* right border canopy */}
         <polygon
           points="
             1920,0 1660,45 
@@ -116,7 +113,6 @@ export default function HelmetVisorFrame() {
           "
           fill="url(#armorGradient)"
         />
-        {/* Right Cheek Inner Contour Edge */}
         <polyline
           points="
             1660,45 1730,160 1650,380 1740,550 1650,750 1740,920 1600,1010
@@ -137,7 +133,7 @@ export default function HelmetVisorFrame() {
           opacity="0.8"
         />
 
-        {/* 4. BOTTOM CHIN VISOR CONSOLE TRAY */}
+        {/* bottom chin tray */}
         <polygon
           points="
             0,1080 320,1010 
@@ -147,7 +143,6 @@ export default function HelmetVisorFrame() {
           "
           fill="url(#armorGradient)"
         />
-        {/* Bottom Chin Bevel Contour */}
         <polyline
           points="
             320,1010 500,1010 560,950 1360,950 1420,1010 1600,1010
@@ -168,7 +163,7 @@ export default function HelmetVisorFrame() {
           opacity="0.85"
         />
 
-        {/* 5. TACTICAL CORNER BOLTS & SENSOR NODES */}
+        {/* corner accents */}
         <circle cx="270" cy="55" r="3.5" fill="#00F5FF" opacity="0.9" />
         <circle cx="270" cy="55" r="7" fill="none" stroke="#FFBF00" strokeWidth="1" />
 

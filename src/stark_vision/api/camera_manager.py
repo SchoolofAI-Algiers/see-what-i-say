@@ -1,8 +1,6 @@
 """
-Camera acquisition and frame streaming manager.
-
-Runs threaded OpenCV hardware capture (buffer size 1) with fallback
-synthetic frames to decouple video ingestion from model inference.
+Threaded webcam frame capture with a single-slot buffer so frames never queue up.
+Serves mjpeg frames for the web UI and provides raw numpy arrays for the detector.
 """
 
 from __future__ import annotations
@@ -19,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 class CameraManager:
-    """Threaded OpenCV video capture manager with ring buffer size 1."""
+    # keeps the latest frame in memory and drops old ones to avoid video lag
 
     def __init__(
         self,

@@ -1,9 +1,6 @@
 """
-STARK VISION — 3D Holographic Perspective Geometry Engine.
-
-Renders true 3D wireframe models (rotating Arc Reactor gyroscope core,
-volumetric target brackets, and gimbal rings) projected onto 2D camera frames
-with sub-pixel anti-aliasing and depth parallax.
+3D wireframe projection helpers for hud graphics.
+Projects rotating 3d points onto 2d screen cooridnates with simple perspective division.
 """
 
 from __future__ import annotations
@@ -14,7 +11,7 @@ from typing import Sequence
 import cv2
 import numpy as np
 
-# BGR Design Tokens
+# BGR color tokens
 ARC_CYAN = (255, 240, 0)
 PLASMA_BLUE = (255, 144, 30)
 STARK_GOLD = (0, 191, 255)
@@ -22,7 +19,7 @@ HUD_WHITE = (245, 245, 245)
 
 
 def rotate_x(points: np.ndarray, angle_rad: float) -> np.ndarray:
-    """Rotate (N, 3) points around the X-axis."""
+    # rotatng (N, 3) points around X axis
     cos_a = math.cos(angle_rad)
     sin_a = math.sin(angle_rad)
     rot = np.array(
@@ -33,7 +30,7 @@ def rotate_x(points: np.ndarray, angle_rad: float) -> np.ndarray:
 
 
 def rotate_y(points: np.ndarray, angle_rad: float) -> np.ndarray:
-    """Rotate (N, 3) points around the Y-axis."""
+    # rotatng (N, 3) points around Y axis
     cos_a = math.cos(angle_rad)
     sin_a = math.sin(angle_rad)
     rot = np.array(
@@ -44,7 +41,7 @@ def rotate_y(points: np.ndarray, angle_rad: float) -> np.ndarray:
 
 
 def rotate_z(points: np.ndarray, angle_rad: float) -> np.ndarray:
-    """Rotate (N, 3) points around the Z-axis."""
+    # rotatng (N, 3) points around Z axis
     cos_a = math.cos(angle_rad)
     sin_a = math.sin(angle_rad)
     rot = np.array(
@@ -60,15 +57,10 @@ def project_points(
     focal_length: float = 140.0,
     camera_dist: float = 90.0,
 ) -> np.ndarray:
-    """
-    Project 3D points (N, 3) into 2D pixel coordinates with perspective division.
-
-    Returns:
-        (N, 2) integer pixel array.
-    """
+    # simple pinhole camera projection to 2D pixel space
     cx, cy = center
     z = points_3d[:, 2] + camera_dist
-    z = np.maximum(z, 1.0)  # Avoid division by zero
+    z = np.maximum(z, 1.0)
     scale = focal_length / z
 
     u = cx + points_3d[:, 0] * scale
@@ -121,9 +113,7 @@ def draw_3d_arc_reactor(
     frame_count: int,
     base_radius: float = 24.0,
 ) -> None:
-    """
-    Render a true 3D rotating holographic Arc Reactor gyroscope with depth parallax.
-    """
+    # 3-ring rotating wireframe drawn on top of the frame
     t = frame_count * 0.04
 
     # 1. Outer Ring: Tilted around X by 30 degrees, rotating around Z

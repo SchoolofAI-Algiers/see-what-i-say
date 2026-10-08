@@ -60,7 +60,7 @@ export default function TargetReticleHUD({
         />
       )}
 
-      {/* TOP TITLE TAG: #1 PERSON [94.2% TARGET ACQUISITION] */}
+      {/* target title tag */}
       <div className="absolute -top-10 left-1/2 -translate-x-1/2 flex flex-col items-center whitespace-nowrap">
         <span className="font-orbitron text-xs md:text-sm font-bold tracking-widest text-stark-cyan text-glow-cyan uppercase">
           #{detection.id} {detection.label}
@@ -70,8 +70,8 @@ export default function TargetReticleHUD({
         </span>
       </div>
 
-      {/* 4 AUTHENTIC MARK 85 CHAMFERED BRACKETS */}
-      {/* Top-Left Bracket */}
+      {/* corner brackets */}
+      {/* top-left */}
       <div className="absolute -top-2 -left-2 w-10 h-10 pointer-events-none">
         <svg viewBox="0 0 40 40" className="w-full h-full">
           <path
@@ -93,7 +93,7 @@ export default function TargetReticleHUD({
         </svg>
       </div>
 
-      {/* Top-Right Bracket */}
+      {/* top-right */}
       <div className="absolute -top-2 -right-2 w-10 h-10 pointer-events-none">
         <svg viewBox="0 0 40 40" className="w-full h-full">
           <path
@@ -115,7 +115,7 @@ export default function TargetReticleHUD({
         </svg>
       </div>
 
-      {/* Bottom-Left Bracket */}
+      {/* bottom-left */}
       <div className="absolute -bottom-2 -left-2 w-10 h-10 pointer-events-none">
         <svg viewBox="0 0 40 40" className="w-full h-full">
           <path
@@ -137,7 +137,7 @@ export default function TargetReticleHUD({
         </svg>
       </div>
 
-      {/* Bottom-Right Bracket */}
+      {/* bottom-right */}
       <div className="absolute -bottom-2 -right-2 w-10 h-10 pointer-events-none">
         <svg viewBox="0 0 40 40" className="w-full h-full">
           <path
@@ -159,13 +159,12 @@ export default function TargetReticleHUD({
         </svg>
       </div>
 
-      {/* BLAZING BRIGHT CYAN HORIZONTAL LASER SCANNER BEAM */}
+      {/* horizonal laser sweep beam */}
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-[3px] bg-gradient-to-r from-transparent via-[#00F5FF] to-transparent shadow-[0_0_20px_#00F5FF,0_0_35px_#00F5FF] animate-laser-sweep pointer-events-none">
-        {/* Center intense flare */}
         <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-6 h-3 bg-white rounded-full blur-[2px] opacity-90" />
       </div>
 
-      {/* LEFT-SIDE TELEMETRY RAIL (ARMOR SYS, TGT LOCK, AMMO) */}
+      {/* left status badges */}
       <div className="absolute top-1/2 -translate-y-1/2 -left-32 hidden sm:flex flex-col gap-1.5 font-mono text-[9px] text-slate-300">
         <div className="flex items-center gap-1.5 text-stark-cyan font-bold">
           <Shield className="w-3.5 h-3.5 text-stark-cyan" />
@@ -182,7 +181,7 @@ export default function TargetReticleHUD({
         </div>
       </div>
 
-      {/* RIGHT-SIDE TELEMETRY RAIL (ENVIRONMENT, RANGE) */}
+      {/* right telemetry badges */}
       <div className="absolute top-1/2 -translate-y-1/2 -right-32 hidden sm:flex flex-col gap-1.5 font-mono text-[9px] text-slate-300">
         <div className="flex items-center gap-1.5 text-stark-cyan font-bold">
           <Compass className="w-3.5 h-3.5 text-stark-cyan" />

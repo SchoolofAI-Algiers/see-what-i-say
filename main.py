@@ -1,9 +1,6 @@
 """
-STARK VISION - Entry Point Launcher
-Run with:
-    python main.py             # Launches both FastAPI server & Next.js HUD
-    python main.py --server    # Runs only the FastAPI backend on port 8000
-    python main.py --test      # Runs quick live camera grounding test
+Simple launcer script.
+Can spin up just the fastapi server, run the quick live test, or kick off the full stack.
 """
 
 from __future__ import annotations
@@ -15,11 +12,11 @@ from pathlib import Path
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="STARK VISION Launcher")
+    parser = argparse.ArgumentParser(description="Stark Vision launcher")
     parser.add_argument(
         "--server",
         action="store_true",
-        help="Run only the FastAPI WebSocket streaming backend",
+        help="Run fastapi websocket backend only",
     )
     parser.add_argument(
         "--test",

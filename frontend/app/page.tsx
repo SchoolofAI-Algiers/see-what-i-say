@@ -38,29 +38,29 @@ interface SpeechRecognitionInstance {
 }
 
 export default function StarkVisionCockpit() {
-  const [bootComplete, setBootComplete] = useState<boolean>(true); // Immediate cockpit entry for seamless demo
+  const [bootComplete, setBootComplete] = useState<boolean>(true); // skip boot sequence by default for faster dev reload
   const [query, setQuery] = useState<string>("person");
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [effectMode, setEffectMode] = useState<EffectMode>("highlight");
   const [boxThreshold, setBoxThreshold] = useState<number>(0.25);
   const [textThreshold, setTextThreshold] = useState<number>(0.20);
-  const [cameraActive, setCameraActive] = useState<boolean>(true); // Defaults to live webcam feed
+  const [cameraActive, setCameraActive] = useState<boolean>(true);
   const [scanStatus, setScanStatus] = useState<"STANDBY" | "SCANNING" | "LOCKED" | "NOT_FOUND">("STANDBY");
 
-  // Telemetry & WebSocket state
+  // telemetry stats
   const [wsConnected, setWsConnected] = useState<boolean>(false);
   const [inferenceMs, setInferenceMs] = useState<number>(28);
   const [vramUsedMb, setVramUsedMb] = useState<number>(3190);
   const [fps, setFps] = useState<number>(60.0);
 
-  // Initial detection list (warmed up on connection)
+  // current detected boxes
   const [detections, setDetections] = useState<DetectionBox[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const fpsFramesRef = useRef<number[]>([]);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
-  // Submit Query handler
+  // send grounding prompt over websocket
   const handleSubmitQuery = useCallback(
     (newQuery: string) => {
       const q = newQuery.trim();
@@ -80,7 +80,7 @@ export default function StarkVisionCockpit() {
     [boxThreshold, textThreshold]
   );
 
-  // Locked 60.0 FPS Viewport Render Measurement
+  // client fps measuremnt
   useEffect(() => {
     let animId: number;
     let lastTime = performance.now();
@@ -106,7 +106,7 @@ export default function StarkVisionCockpit() {
     return () => cancelAnimationFrame(animId);
   }, []);
 
-  // WebSocket Connection to FastAPI Grounding Engine
+  // websocket connection to backend
   useEffect(() => {
     let socket: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout;
@@ -120,7 +120,7 @@ export default function StarkVisionCockpit() {
         socket.onopen = () => {
           setWsConnected(true);
           setScanStatus("SCANNING");
-          // Trigger immediate scan on camera frame so target reticle locks immediately on load
+          // run initial detection once socket connects
           socket?.send(
             JSON.stringify({
               type: "ground",
@@ -172,7 +172,7 @@ export default function StarkVisionCockpit() {
     };
   }, []);
 
-  // Web Speech API Voice Recognition (Hands-free STT)
+  // browser speech recognition for mic input
   useEffect(() => {
     if (typeof window !== "undefined") {
       const windowWithSpeech = window as unknown as {
@@ -222,7 +222,7 @@ export default function StarkVisionCockpit() {
     }
   }, [isRecording, handleSubmitQuery]);
 
-  // Toggle Recording handler
+  // toggle mic recording
   const handleToggleRecording = useCallback(() => {
     setIsRecording((prev) => {
       const nextState = !prev;
@@ -247,12 +247,11 @@ export default function StarkVisionCockpit() {
 
   return (
     <main className="relative w-screen h-screen overflow-hidden bg-[#05080e] select-none">
-      {/* Optional Cinematic JARVIS Boot Sequence */}
       {!bootComplete && (
         <BootSequence onComplete={() => setBootComplete(true)} />
       )}
 
-      {/* 1. Underlying Video / Photorealistic Penthouse Layer */}
+      {/* camera feed / backdrop */}
       <VisionCanvas
         detections={detections}
         effectMode={effectMode}
@@ -260,20 +259,15 @@ export default function StarkVisionCockpit() {
         className="absolute inset-0 z-0"
       />
 
-      {/* 2. Authentic Mark 85 Helmet Visor Canopy (Faceted Armor Silhouette) */}
+      {/* visor frame borders */}
       <HelmetVisorFrame />
 
-      {/* 3. Tactical Heads-Up Display Overlays */}
+      {/* hud layer */}
       <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-4 md:p-6">
-        {/* Top Header Rail */}
+        {/* top widgets */}
         <div className="w-full flex items-start justify-between gap-4 pointer-events-auto">
-          {/* Top-Left: Arc Reactor HUD */}
           <ArcReactorHUD className="pl-6 pt-3" />
-
-          {/* Top-Center: Audio Spectrum Equalizer */}
           <AudioSpectrumHUD isRecording={isRecording} className="pt-2.5" />
-
-          {/* Top-Right: Armor & GPU Telemetry Diagnostics */}
           <ArmorDiagnosticsHUD
             fps={fps}
             inferenceMs={inferenceMs}
@@ -283,7 +277,7 @@ export default function StarkVisionCockpit() {
           />
         </div>
 
-        {/* Center Crosshair & Compass Strip */}
+        {/* center crosshair */}
         <div className="w-full flex items-center justify-center pointer-events-none">
           <div className="font-mono text-[9px] tracking-widest text-slate-500 uppercase flex items-center gap-3">
             <span>HDG 042°</span>
@@ -292,7 +286,7 @@ export default function StarkVisionCockpit() {
           </div>
         </div>
 
-        {/* Bottom Cockpit Chin Console (1:1 with Reference Mockup) */}
+        {/* bottom console bar */}
         <div className="w-full flex justify-center pointer-events-auto pb-2">
           <CommandConsoleHUD
             query={query}

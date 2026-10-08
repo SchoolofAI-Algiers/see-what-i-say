@@ -125,7 +125,7 @@ export default function ArcReactorHUD({ className = "" }: ArcReactorHUDProps) {
 
   return (
     <div className={`flex flex-col gap-1.5 select-none ${className}`}>
-      {/* Top Header Tag */}
+      {/* header status tag */}
       <div className="flex items-center gap-2">
         <div className="w-1.5 h-1.5 rounded-full bg-stark-cyan animate-ping" />
         <span className="font-orbitron text-[10px] md:text-[11px] font-bold tracking-wider text-stark-gold text-glow-gold uppercase">
@@ -134,14 +134,13 @@ export default function ArcReactorHUD({ className = "" }: ArcReactorHUDProps) {
         </span>
       </div>
 
-      {/* Main Dial Area */}
+      {/* dial graphic */}
       <div className="relative w-44 h-32 flex items-center justify-center">
-        {/* SVG Surrounding Telemetry Arc & Ticks */}
+        {/* gauge ring lines */}
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none"
           viewBox="0 0 180 130"
         >
-          {/* Outer Cyan Arc */}
           <path
             d="M 28 65 A 50 50 0 0 1 152 65"
             fill="none"
@@ -150,7 +149,6 @@ export default function ArcReactorHUD({ className = "" }: ArcReactorHUDProps) {
             strokeDasharray="4 2"
             opacity="0.8"
           />
-          {/* Inner Gold Arc */}
           <path
             d="M 38 65 A 40 40 0 0 1 142 65"
             fill="none"
@@ -159,7 +157,7 @@ export default function ArcReactorHUD({ className = "" }: ArcReactorHUDProps) {
             opacity="0.9"
           />
 
-          {/* Left Arc Radial Ticks */}
+          {/* left ticks */}
           <path
             d="M 20 40 L 14 36 M 16 55 L 10 55 M 18 70 L 12 72 M 22 85 L 16 90"
             stroke="#00F5FF"
@@ -168,7 +166,6 @@ export default function ArcReactorHUD({ className = "" }: ArcReactorHUDProps) {
             opacity="0.85"
           />
 
-          {/* Left Vertical Arc Text */}
           <text
             x="8"
             y="78"
@@ -182,7 +179,7 @@ export default function ArcReactorHUD({ className = "" }: ArcReactorHUDProps) {
             ROTATING TELEMETRY
           </text>
 
-          {/* Right Arc Radial Ticks */}
+          {/* right ticks */}
           <path
             d="M 160 40 L 166 36 M 164 55 L 170 55 M 162 70 L 168 72 M 158 85 L 164 90"
             stroke="#FFBF00"
@@ -192,14 +189,14 @@ export default function ArcReactorHUD({ className = "" }: ArcReactorHUDProps) {
           />
         </svg>
 
-        {/* 3D WebGL Canvas */}
+        {/* 3d canvas container */}
         <div
           ref={threeRef}
           className="w-[100px] h-[100px] relative z-10 filter drop-shadow-[0_0_15px_#00F5FF]"
         />
       </div>
 
-      {/* Bottom Footer Telemetry */}
+      {/* footer text */}
       <div className="font-mono text-[9px] text-slate-300 tracking-wider flex items-center gap-1.5">
         <span className="text-stark-cyan font-bold">ARC REACTOR MK85</span>
         <span className="text-slate-600">{"//"}</span>
