@@ -60,7 +60,7 @@ def get_camera_manager() -> CameraManager:
     """Retrieve or initialize the CameraManager singleton."""
     global _camera_manager
     if _camera_manager is None:
-        _camera_manager = CameraManager(device_id=0, target_width=640, target_height=480, target_fps=30)
+        _camera_manager = CameraManager(device_id=0, target_width=1280, target_height=720, target_fps=30)
         _camera_manager.start()
     return _camera_manager
 
@@ -70,6 +70,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan context for hardware initialization and cleanup."""
     logger.info("Starting STARK VISION API Server...")
     cam = get_camera_manager()
+    logger.info("Preloading Grounding DINO Base model into VRAM...")
+    grounder = get_grounder()
+    # Eager CUDA forward pass warmup to eliminate cold-start stalls on first prompt
+    dummy_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+    try:
+        _ = grounder.find(dummy_frame, "warmup .")
+        logger.info("Grounding DINO Base preloaded and warmed up in VRAM.")
+    except Exception as e:
+        logger.warning("Model warmup failed: %s", e)
+
     yield
     logger.info("Shutting down STARK VISION API Server...")
     if cam:

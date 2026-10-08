@@ -124,9 +124,13 @@ class Grounder:
 
         t0 = time.perf_counter()
         self.processor = AutoProcessor.from_pretrained(self.model_id)
+        # Lock processor resolution to 16:9 (384x640) for 89ms inference and zero aspect ratio distortion
+        if hasattr(self.processor, "image_processor") and hasattr(self.processor.image_processor, "size"):
+            self.processor.image_processor.size = {"shortest_edge": 384, "longest_edge": 640}
+
         self.model = AutoModelForZeroShotObjectDetection.from_pretrained(
             self.model_id,
-            torch_dtype=self.dtype if self.device.startswith("cuda") else torch.float32,
+            dtype=self.dtype if self.device.startswith("cuda") else torch.float32,
         ).to(self.device)
         self.model.eval()
         load_time = (time.perf_counter() - t0) * 1000

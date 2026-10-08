@@ -19,9 +19,15 @@ export default function VisionCanvas({
   className = "",
 }: VisionCanvasProps) {
   const [streamError, setStreamError] = useState(false);
+  const [videoFeedUrl, setVideoFeedUrl] = useState("http://localhost:8000/api/video_feed");
 
-  // Direct backend MJPEG video feed URL (proxied via Next.js rewrites)
-  const videoFeedUrl = "/api/video_feed";
+  // Connect directly to FastAPI on port 8000 to eliminate Node.js dev-server reverse proxy overhead
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const host = window.location.hostname || "localhost";
+      setVideoFeedUrl(`http://${host}:8000/api/video_feed`);
+    }
+  }, []);
 
   return (
     <div
@@ -36,7 +42,7 @@ export default function VisionCanvas({
         }}
       />
 
-      {/* 2. Real-Time Python MJPEG Video Stream (30 FPS, hardware captured by OpenCV) */}
+      {/* 2. Real-Time Python MJPEG Video Stream (30 FPS 16:9 HD, direct from FastAPI) */}
       {cameraActive && !streamError && (
         <img
           src={videoFeedUrl}

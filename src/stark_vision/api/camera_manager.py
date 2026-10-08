@@ -24,8 +24,8 @@ class CameraManager:
     def __init__(
         self,
         device_id: int = 0,
-        target_width: int = 640,
-        target_height: int = 480,
+        target_width: int = 1280,
+        target_height: int = 720,
         target_fps: int = 30,
     ) -> None:
         self.device_id = device_id
@@ -48,7 +48,7 @@ class CameraManager:
         # Eagerly pre-populate initial frame buffer to prevent cold-start race conditions
         initial_frame = self._generate_synthetic_frame()
         self._latest_frame = initial_frame
-        _, buf = cv2.imencode(".jpg", initial_frame, [cv2.IMWRITE_JPEG_QUALITY, 75])
+        _, buf = cv2.imencode(".jpg", initial_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         self._latest_jpeg = buf.tobytes()
 
     def start(self) -> bool:
@@ -65,9 +65,11 @@ class CameraManager:
         )
         self._thread.start()
         logger.info(
-            "CameraManager started (hardware_active=%s, device_id=%d)",
+            "CameraManager started (hardware_active=%s, device_id=%d, resolution=%dx%d)",
             self._is_hardware_active,
             self.device_id,
+            self.target_width,
+            self.target_height,
         )
         return True
 
@@ -76,13 +78,15 @@ class CameraManager:
         try:
             cap = cv2.VideoCapture(self.device_id)
             if cap.isOpened():
+                # Enforce MJPG fourcc on Linux V4L2 to unlock native 720p/1080p 16:9 HD
+                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*"MJPG"))
                 cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
                 cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.target_width)
                 cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.target_height)
                 cap.set(cv2.CAP_PROP_FPS, self.target_fps)
                 self._cap = cap
                 self._is_hardware_active = True
-                logger.info("Hardware camera %d acquired successfully", self.device_id)
+                logger.info("Hardware camera %d acquired successfully (16:9 HD)", self.device_id)
             else:
                 self._cap = None
                 self._is_hardware_active = False
@@ -118,11 +122,11 @@ class CameraManager:
             if frame is None:
                 frame = self._generate_synthetic_frame()
 
-            # Encode JPEG for direct web streaming
+            # Encode JPEG for direct web streaming (high-fidelity 85% quality)
             success, enc_buf = cv2.imencode(
                 ".jpg",
                 frame,
-                [cv2.IMWRITE_JPEG_QUALITY, 75],
+                [cv2.IMWRITE_JPEG_QUALITY, 85],
             )
             jpeg_bytes = enc_buf.tobytes() if success else None
 
