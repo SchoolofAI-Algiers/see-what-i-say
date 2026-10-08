@@ -27,6 +27,8 @@ interface CommandConsoleHUDProps {
   onTextThresholdChange: (v: number) => void;
   cameraActive: boolean;
   onToggleCamera: () => void;
+  scanStatus?: "STANDBY" | "SCANNING" | "LOCKED" | "NOT_FOUND";
+  targetCount?: number;
   className?: string;
 }
 
@@ -44,9 +46,23 @@ export default function CommandConsoleHUD({
   onTextThresholdChange,
   cameraActive,
   onToggleCamera,
+  scanStatus = "STANDBY",
+  targetCount = 0,
   className = "",
 }: CommandConsoleHUDProps) {
   const [activeTab, setActiveTab] = useState<"none" | "effects" | "cfg">("none");
+
+  // Debounced auto-grounding: triggers search 600ms after user stops typing
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (trimmed.length < 3) return;
+
+    const timer = setTimeout(() => {
+      onSubmitQuery(trimmed);
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [query, onSubmitQuery]);
 
   // Global Keyboard Shortcuts
   useEffect(() => {
@@ -74,12 +90,16 @@ export default function CommandConsoleHUD({
         setActiveTab((prev) => (prev === "cfg" ? "none" : "cfg"));
       } else if (e.key.toLowerCase() === "c") {
         onToggleCamera();
+      } else if (e.key === "+" || e.key === "=") {
+        onBoxThresholdChange(Math.min(0.80, Math.round((boxThreshold + 0.05) * 100) / 100));
+      } else if (e.key === "-" || e.key === "_") {
+        onBoxThresholdChange(Math.max(0.15, Math.round((boxThreshold - 0.05) * 100) / 100));
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [query, onToggleRecording, onEffectModeChange, onSubmitQuery, onToggleCamera]);
+  }, [query, onToggleRecording, onEffectModeChange, onSubmitQuery, onToggleCamera, boxThreshold, onBoxThresholdChange]);
 
   return (
     <div className={`flex flex-col items-center gap-2 select-none ${className}`}>
@@ -95,7 +115,7 @@ export default function CommandConsoleHUD({
               onKeyDown={(e) => {
                 if (e.key === "Enter") onSubmitQuery(query);
               }}
-              placeholder="Referring query (e.g. 'person in black hoodie on the left', 'laptop')..."
+              placeholder="Referring query (e.g. 'table', 'chair', 'bed', 'person in black shirt')..."
               className="w-full bg-slate-900/90 border border-stark-cyan/50 focus:border-stark-gold text-slate-100 placeholder:text-slate-500 pl-9 pr-24 py-2 rounded text-xs font-mono outline-none shadow-[0_0_12px_rgba(0,245,255,0.2)]"
             />
             <button
@@ -120,23 +140,51 @@ export default function CommandConsoleHUD({
           </button>
         </div>
 
-        {/* Quick-Target Referring Expression Preset Chips */}
-        <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-800/80">
-          <span className="text-[9px] font-orbitron font-bold text-slate-400 uppercase tracking-wider mr-1">
-            TARGETS:
-          </span>
-          {["person", "laptop", "cell phone", "bottle", "chair", "backpack"].map((tgt) => (
-            <button
-              key={tgt}
-              onClick={() => {
-                onQueryChange(tgt);
-                onSubmitQuery(tgt);
-              }}
-              className="px-2.5 py-0.5 bg-slate-900/80 border border-stark-cyan/40 hover:border-stark-gold hover:text-stark-gold rounded font-mono text-[11px] text-slate-300 transition-all hover:shadow-[0_0_8px_rgba(255,191,0,0.3)]"
-            >
-              #{tgt}
-            </button>
-          ))}
+        {/* Tactical Lock Status Banner & Preset Chips */}
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[9px] font-orbitron font-bold text-slate-400 uppercase tracking-wider mr-0.5">
+              TARGETS:
+            </span>
+            {["person", "table", "chair", "bed", "laptop", "pillow", "cushion", "bottle"].map((tgt) => (
+              <button
+                key={tgt}
+                onClick={() => {
+                  onQueryChange(tgt);
+                  onSubmitQuery(tgt);
+                }}
+                className={`px-2 py-0.5 rounded font-mono text-[11px] transition-all border ${
+                  query.toLowerCase() === tgt
+                    ? "bg-stark-cyan/20 border-stark-cyan text-stark-cyan font-bold shadow-[0_0_8px_rgba(0,245,255,0.4)]"
+                    : "bg-slate-900/80 border-stark-cyan/30 hover:border-stark-gold hover:text-stark-gold text-slate-300"
+                }`}
+              >
+                #{tgt}
+              </button>
+            ))}
+          </div>
+
+          {/* Tactical Feedback Status Badge */}
+          <div className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider shrink-0">
+            {scanStatus === "SCANNING" && (
+              <span className="text-stark-gold text-glow-gold animate-pulse flex items-center gap-1">
+                <Crosshair className="w-3 h-3 animate-spin" /> SCANNING...
+              </span>
+            )}
+            {scanStatus === "LOCKED" && (
+              <span className="text-stark-cyan text-glow-cyan font-bold flex items-center gap-1">
+                ● LOCKED [{targetCount}]
+              </span>
+            )}
+            {scanStatus === "NOT_FOUND" && (
+              <span className="text-stark-crimson font-bold flex items-center gap-1">
+                ▲ 0 TARGETS (GAIN: {boxThreshold.toFixed(2)})
+              </span>
+            )}
+            {scanStatus === "STANDBY" && (
+              <span className="text-slate-500">STANDBY</span>
+            )}
+          </div>
         </div>
       </div>
 

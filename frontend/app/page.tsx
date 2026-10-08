@@ -39,12 +39,13 @@ interface SpeechRecognitionInstance {
 
 export default function StarkVisionCockpit() {
   const [bootComplete, setBootComplete] = useState<boolean>(true); // Immediate cockpit entry for seamless demo
-  const [query, setQuery] = useState<string>("sofa");
+  const [query, setQuery] = useState<string>("person");
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [effectMode, setEffectMode] = useState<EffectMode>("highlight");
-  const [boxThreshold, setBoxThreshold] = useState<number>(0.35);
-  const [textThreshold, setTextThreshold] = useState<number>(0.25);
+  const [boxThreshold, setBoxThreshold] = useState<number>(0.25);
+  const [textThreshold, setTextThreshold] = useState<number>(0.20);
   const [cameraActive, setCameraActive] = useState<boolean>(true); // Defaults to live webcam feed
+  const [scanStatus, setScanStatus] = useState<"STANDBY" | "SCANNING" | "LOCKED" | "NOT_FOUND">("STANDBY");
 
   // Telemetry & WebSocket state
   const [wsConnected, setWsConnected] = useState<boolean>(false);
@@ -52,17 +53,8 @@ export default function StarkVisionCockpit() {
   const [vramUsedMb, setVramUsedMb] = useState<number>(3190);
   const [fps, setFps] = useState<number>(60.0);
 
-  // Default locked detection matching the sofa in the clean room
-  const [detections, setDetections] = useState<DetectionBox[]>([
-    {
-      id: 1,
-      label: "SOFA",
-      confidence: 0.968,
-      box: [0.30, 0.54, 0.70, 0.82],
-      distance: 2.15,
-      isAmbiguous: false,
-    },
-  ]);
+  // Initial detection list (warmed up on connection)
+  const [detections, setDetections] = useState<DetectionBox[]>([]);
 
   const wsRef = useRef<WebSocket | null>(null);
   const fpsFramesRef = useRef<number[]>([]);
@@ -71,12 +63,14 @@ export default function StarkVisionCockpit() {
   // Submit Query handler
   const handleSubmitQuery = useCallback(
     (newQuery: string) => {
-      if (!newQuery.trim()) return;
+      const q = newQuery.trim();
+      if (!q) return;
+      setScanStatus("SCANNING");
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
             type: "ground",
-            query: newQuery.trim(),
+            query: q,
             box_threshold: boxThreshold,
             text_threshold: textThreshold,
           })
@@ -125,6 +119,16 @@ export default function StarkVisionCockpit() {
 
         socket.onopen = () => {
           setWsConnected(true);
+          setScanStatus("SCANNING");
+          // Trigger immediate scan on camera frame so target reticle locks immediately on load
+          socket?.send(
+            JSON.stringify({
+              type: "ground",
+              query: "person",
+              box_threshold: 0.25,
+              text_threshold: 0.20,
+            })
+          );
         };
 
         socket.onmessage = (event) => {
@@ -132,6 +136,7 @@ export default function StarkVisionCockpit() {
             const data = JSON.parse(event.data);
             if (data.detections !== undefined) {
               setDetections(data.detections);
+              setScanStatus(data.detections.length > 0 ? "LOCKED" : "NOT_FOUND");
             }
             if (data.inference_ms !== undefined) {
               setInferenceMs(data.inference_ms);
@@ -301,6 +306,8 @@ export default function StarkVisionCockpit() {
             onBoxThresholdChange={setBoxThreshold}
             textThreshold={textThreshold}
             onTextThresholdChange={setTextThreshold}
+            scanStatus={scanStatus}
+            targetCount={detections.length}
             cameraActive={cameraActive}
             onToggleCamera={() => setCameraActive(!cameraActive)}
           />

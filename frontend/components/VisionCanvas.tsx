@@ -20,6 +20,7 @@ export default function VisionCanvas({
 }: VisionCanvasProps) {
   const [streamError, setStreamError] = useState(false);
   const [videoFeedUrl, setVideoFeedUrl] = useState("http://localhost:8000/api/video_feed");
+  const [retryKey, setRetryKey] = useState(0);
 
   // Connect directly to FastAPI on port 8000 to eliminate Node.js dev-server reverse proxy overhead
   React.useEffect(() => {
@@ -28,6 +29,17 @@ export default function VisionCanvas({
       setVideoFeedUrl(`http://${host}:8000/api/video_feed`);
     }
   }, []);
+
+  // Self-healing reconnection if camera stream temporarily drops
+  React.useEffect(() => {
+    if (streamError) {
+      const timer = setTimeout(() => {
+        setRetryKey((k) => k + 1);
+        setStreamError(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [streamError]);
 
   return (
     <div
@@ -45,6 +57,7 @@ export default function VisionCanvas({
       {/* 2. Real-Time Python MJPEG Video Stream (30 FPS 16:9 HD, direct from FastAPI) */}
       {cameraActive && !streamError && (
         <img
+          key={retryKey}
           src={videoFeedUrl}
           alt="STARK VISION Live Feed"
           onError={() => setStreamError(true)}
@@ -71,8 +84,8 @@ export default function VisionCanvas({
         }}
       />
 
-      {/* 5. Mark 85 Tactical HUD Target Reticles */}
-      <div className="absolute inset-0 pointer-events-none">
+      {/* 5. Mark 85 Tactical HUD Target Reticles (Layered above video feed) */}
+      <div className="absolute inset-0 pointer-events-none z-10">
         {detections.map((detection) => (
           <TargetReticleHUD
             key={detection.id}

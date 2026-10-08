@@ -22,8 +22,8 @@ class ThresholdConfig:
 
     min_box_threshold: float = 0.15
     max_box_threshold: float = 0.65
-    terse_base_threshold: float = 0.50   # Baseline for single terse noun ("cup", "person")
-    relative_dropoff_ratio: float = 0.60  # Keep candidates within 60% of top score
+    terse_base_threshold: float = 0.28   # Benchmark calibrated baseline for terse nouns ("table", "chair", "person")
+    relative_dropoff_ratio: float = 0.55  # Keep candidates within 55% of top score
     text_threshold_ratio: float = 0.75    # Text alignment threshold derived relative to box
 
 
@@ -82,9 +82,9 @@ class DynamicThresholdCalculator:
 
         complexity = self.estimate_query_complexity(text_prompt)
 
-        # For simple queries ("person"): threshold stays high (~0.50) to suppress false positives.
-        # For complex queries ("guy with blue shirt holding cup"): threshold scales down to ~0.20.
-        box_thresh = self.config.terse_base_threshold - (complexity * 0.30)
+        # Terse queries anchor at 0.28 (benchmarked on Grounding DINO);
+        # Complex expressions ("person in black hoodie near table") scale down to ~0.18.
+        box_thresh = self.config.terse_base_threshold - (complexity * 0.10)
         box_thresh = max(
             self.config.min_box_threshold,
             min(self.config.max_box_threshold, box_thresh),
