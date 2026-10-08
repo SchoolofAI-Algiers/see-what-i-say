@@ -66,5 +66,10 @@ frontend/node_modules/
 frontend/.next/
 frontend/out/
 
+# Local graphify cache
+graphify-out/
+docs/stack_validation_master_prompt.md
+
+
 
 
