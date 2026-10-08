@@ -10,10 +10,12 @@ from stark_vision.hud.overlay import (
     PLASMA_BLUE,
     STARK_GOLD,
     JarvisHUD,
+    HudRenderer,
 )
 
 __all__ = [
     "JarvisHUD",
+    "HudRenderer",
     "ARC_CYAN",
     "PLASMA_BLUE",
     "STARK_GOLD",

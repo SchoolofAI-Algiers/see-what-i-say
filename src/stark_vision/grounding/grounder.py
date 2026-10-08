@@ -19,6 +19,7 @@ import torch
 from PIL import Image
 from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
 
+from stark_vision.contracts import BoundingBox, Frame, GroundingCandidate
 from stark_vision.grounding.adaptive_threshold import (
     DynamicThresholdCalculator,
     ThresholdConfig,
@@ -30,46 +31,6 @@ from stark_vision.grounding.disambiguation import (
 from stark_vision.grounding.temporal_filter import BoxTemporalFilter
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass(frozen=True)
-class GroundingCandidate:
-    # candidate detection with pixel box [x1, y1, x2, y2], confidence, and text label
-    box: tuple[float, float, float, float]
-    score: float
-    label: str
-
-    @property
-    def x1(self) -> float:
-        return self.box[0]
-
-    @property
-    def y1(self) -> float:
-        return self.box[1]
-
-    @property
-    def x2(self) -> float:
-        return self.box[2]
-
-    @property
-    def y2(self) -> float:
-        return self.box[3]
-
-    @property
-    def width(self) -> float:
-        return max(0.0, self.x2 - self.x1)
-
-    @property
-    def height(self) -> float:
-        return max(0.0, self.y2 - self.y1)
-
-    @property
-    def center(self) -> tuple[float, float]:
-        return ((self.x1 + self.x2) / 2.0, (self.y1 + self.y2) / 2.0)
-
-    @property
-    def area(self) -> float:
-        return self.width * self.height
 
 
 class Grounder:
@@ -261,10 +222,14 @@ class Grounder:
             if idx == 0 and self.temporal_filter is not None:
                 box_coords = self.temporal_filter.filter_box(box_coords)
 
+            bx1 = float(box_coords[0])
+            by1 = float(box_coords[1])
+            bx2 = max(bx1 + 1.0, float(box_coords[2]))
+            by2 = max(by1 + 1.0, float(box_coords[3]))
             candidate = GroundingCandidate(
-                box=box_coords,
-                score=sc.score,
-                label=sc.label,
+                box=BoundingBox(x1=bx1, y1=by1, x2=bx2, y2=by2),
+                score=max(0.0, min(1.0, float(sc.score))),
+                label=str(sc.label),
             )
             final_candidates.append(candidate)
 
@@ -280,16 +245,35 @@ class Grounder:
 
     def find(
         self,
-        frame_bgr: np.ndarray,
-        text_prompt: str,
+        frame: Frame | np.ndarray | None = None,
+        text_prompt: str = "",
         box_threshold: float | None = None,
         text_threshold: float | None = None,
+        *,
+        frame_bgr: np.ndarray | None = None,
     ) -> list[GroundingCandidate]:
         """
         Primary interface contract matching team specification: grounder.find().
+        Supports Frame dataclass (RGB), positional frame, and frame_bgr kwargs.
         """
+        target = frame if frame is not None else frame_bgr
+        if target is None:
+            raise ValueError("Input frame cannot be None.")
+
+        if hasattr(target, "image"):
+            img_rgb = target.image
+            if img_rgb is None or img_rgb.size == 0:
+                raise ValueError("Frame image cannot be None or empty.")
+            img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        elif isinstance(target, np.ndarray):
+            if target.size == 0:
+                raise ValueError("Input frame cannot be empty.")
+            img_bgr = target
+        else:
+            raise ValueError(f"Unsupported frame type: {type(target)}")
+
         return self.find_candidates(
-            frame_bgr=frame_bgr,
+            frame_bgr=img_bgr,
             text_prompt=text_prompt,
             box_threshold=box_threshold,
             text_threshold=text_threshold,

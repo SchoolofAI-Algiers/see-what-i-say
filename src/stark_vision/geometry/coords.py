@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import math
 
+from stark_vision.contracts import BoundingBox
+
 
 def _sanitize_val(v: float, default: float = 0.0) -> float:
     if math.isnan(v) or math.isinf(v):
@@ -125,3 +127,36 @@ def box_area(
     w = max(0.0, box[2] - box[0])
     h = max(0.0, box[3] - box[1])
     return w * h
+
+
+def normalized_to_pixel(
+    box: BoundingBox | tuple[float, float, float, float],
+    width: int,
+    height: int,
+) -> BoundingBox:
+    """Convert normalized [0, 1] bounding box to image pixel space."""
+    if width <= 0 or height <= 0:
+        raise ValueError("width and height must be positive integers.")
+    b = box.xyxy if hasattr(box, "xyxy") else box
+    bx1 = max(0.0, min(float(width), float(b[0]) * width))
+    by1 = max(0.0, min(float(height), float(b[1]) * height))
+    bx2 = max(bx1 + 1.0, min(float(width), float(b[2]) * width))
+    by2 = max(by1 + 1.0, min(float(height), float(b[3]) * height))
+    return BoundingBox(x1=bx1, y1=by1, x2=bx2, y2=by2)
+
+
+def pixel_to_normalized(
+    box: BoundingBox | tuple[float, float, float, float],
+    width: int,
+    height: int,
+) -> BoundingBox:
+    """Convert image pixel bounding box coordinates to normalized [0, 1] space."""
+    if width <= 0 or height <= 0:
+        raise ValueError("width and height must be positive integers.")
+    b = box.xyxy if hasattr(box, "xyxy") else box
+    bx1 = max(0.0, min(1.0, float(b[0]) / width))
+    by1 = max(0.0, min(1.0, float(b[1]) / height))
+    bx2 = max(bx1 + 1e-4, min(1.0, float(b[2]) / width))
+    by2 = max(by1 + 1e-4, min(1.0, float(b[3]) / height))
+    return BoundingBox(x1=bx1, y1=by1, x2=bx2, y2=by2)
+
