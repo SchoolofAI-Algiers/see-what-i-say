@@ -641,6 +641,7 @@ class HudRenderer:
         return RenderedFrame(output, lines)
 
     @staticmethod
+
     def _draw_box(image: np.ndarray, box: Any, color: tuple[int, int, int], thickness: int = 2) -> None:
         height, width = image.shape[:2]
         x1 = max(0, min(width, int(box.x1)))

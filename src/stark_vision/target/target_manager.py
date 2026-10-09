@@ -1,99 +1,175 @@
-"""
-Tracks active target lifecycle across SAM 2 and Grounding DINO.
-
-Runs SAM 2 tracking each frame while rate limiting heavy Grounding DINO
-passes so the laptop GPU doesn't choke on concurrent transformer inference.
-"""
+"""Application policy for selecting and maintaining the active target."""
 
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass
-from typing import Sequence
 
-from stark_vision.target.state_machine import TargetStateMachine
-from stark_vision.target.target_state import TargetState
+from stark_vision.contracts import (
+    CandidateSelector,
+    CandidateSelectorKind,
+    EffectMode,
+    EffectSpec,
+    GroundingCandidate,
+    GroundingResult,
+    TargetSnapshot,
+    TrackingResult,
+    TrackingStatus,
+)
 
 
 @dataclass
-class TrackedTarget:
-    # bounding box cooridnates [x1, y1, x2, y2] normalized
-    box: tuple[float, float, float, float]
-    confidence: float
-    label: str
-    mask: object | None = None
-    last_updated: float = 0.0
+class PendingAcquisition:
+    request_id: int
+    prompt: str
+    source_frame_id: int
+    candidates: tuple[GroundingCandidate, ...] = ()
+    selected: GroundingCandidate | None = None
+    ambiguous: bool = False
+    target_id: int | None = None
 
 
 class TargetManager:
-    # keeps tracker state and throttles heavy DINO detection calls
+    """Keep active tracking stable while a replacement target is acquired."""
 
-    def __init__(
-        self,
-        grounding_cadence_sec: float = 0.50,  # default 2hz re-check cadance
-        recovery_threshold: float = 0.40,
-    ) -> None:
-        self.grounding_cadence_sec = grounding_cadence_sec
-        self.fsm = TargetStateMachine(recovery_confidence_threshold=recovery_threshold)
-        self.current_target: TrackedTarget | None = None
-        self._last_grounding_time: float = 0.0
+    def __init__(self, score_margin: float = 0.15) -> None:
+        if score_margin < 0:
+            raise ValueError("score_margin must be non-negative")
+        self.score_margin = score_margin
+        self.active: TargetSnapshot | None = None
+        self.pending: PendingAcquisition | None = None
+        self.effect = EffectSpec(EffectMode.NONE)
+        self.message = "Ready"
+        self._next_target_id = 1
 
-    @property
-    def state(self) -> TargetState:
-        return self.fsm.state
+    def begin_acquisition(self, request_id: int, prompt: str, source_frame_id: int) -> None:
+        self.pending = PendingAcquisition(request_id, prompt, source_frame_id)
+        self.message = f"Finding {prompt}"
 
-    def set_query(self, prompt: str) -> None:
-        # resets target state when user gives a new speech or text prompt
-        self.fsm.trigger_query(prompt)
-        self.current_target = None
-        self._last_grounding_time = 0.0
-
-    def should_run_grounding(self, current_time: float | None = None) -> bool:
-        # checks if we need a full detector pass or can stay on lightweight tracker
-        now = current_time if current_time is not None else time.perf_counter()
-
-        if self.state in (TargetState.SEARCHING, TargetState.RECOVERY):
-            return True
-
-        if self.state in (TargetState.AMBIGUOUS, TargetState.IDLE):
+    def update_seed_frame(self, request_id: int, source_frame_id: int) -> bool:
+        if self.pending is None or self.pending.request_id != request_id:
             return False
+        self.pending.source_frame_id = source_frame_id
+        self.pending.candidates = ()
+        self.pending.selected = None
+        self.pending.ambiguous = False
+        self.pending.target_id = None
+        return True
 
-        if self.state == TargetState.TRACKING:
-            return (now - self._last_grounding_time) >= self.grounding_cadence_sec
+    def receive_grounding_result(self, result: GroundingResult) -> GroundingCandidate | None:
+        pending = self.pending
+        if pending is None or pending.request_id != result.request_id:
+            return None
+        if pending.source_frame_id != result.source_frame_id:
+            return None
+        return self.receive_candidates(result.request_id, result.candidates)
 
-        return False
+    def receive_candidates(
+        self, request_id: int, candidates: tuple[GroundingCandidate, ...] | list[GroundingCandidate]
+    ) -> GroundingCandidate | None:
+        pending = self.pending
+        if pending is None or pending.request_id != request_id:
+            return None
+        ordered = tuple(sorted(candidates, key=lambda item: item.score, reverse=True))
+        pending.candidates = ordered
+        pending.selected = None
+        pending.ambiguous = False
+        pending.target_id = None
+        if not ordered:
+            self.pending = None
+            self.message = "No matching target found"
+            return None
+        if len(ordered) > 1 and ordered[0].score - ordered[1].score < self.score_margin:
+            pending.ambiguous = True
+            self.message = "Several candidates found; say left, right, or a candidate number"
+            return None
+        return self._select(ordered[0])
 
-    def mark_grounding_executed(self, current_time: float | None = None) -> None:
-        """Record timestamp of completed Grounding DINO pass."""
-        self._last_grounding_time = current_time if current_time is not None else time.perf_counter()
+    def resolve_candidate(self, selector: CandidateSelector | None) -> GroundingCandidate | None:
+        pending = self.pending
+        if pending is None or not pending.ambiguous or selector is None:
+            return None
+        chosen: GroundingCandidate | None = None
+        if selector.kind is CandidateSelectorKind.RANK and isinstance(selector.value, int):
+            if 1 <= selector.value <= len(pending.candidates):
+                chosen = pending.candidates[selector.value - 1]
+        elif selector.kind is CandidateSelectorKind.SIDE and selector.value in ("left", "right"):
+            ordered = sorted(pending.candidates, key=lambda item: item.box.center[0])
+            chosen = ordered[0] if selector.value == "left" else ordered[-1]
+        return self._select(chosen) if chosen is not None else None
 
-    def update_target(
-        self,
-        box: tuple[float, float, float, float],
-        confidence: float,
-        label: str,
-        current_time: float | None = None,
-    ) -> None:
-        # store bbox and start tracking transition
-        now = current_time if current_time is not None else time.perf_counter()
-        self.current_target = TrackedTarget(
-            box=box,
-            confidence=confidence,
-            label=label,
-            last_updated=now,
+    def pending_target_id(self) -> int | None:
+        return self.pending.target_id if self.pending else None
+
+    def abort_pending(self, message: str) -> None:
+        self.pending = None
+        self.message = message
+
+    def promote(self, result: TrackingResult) -> int | None:
+        pending = self.pending
+        if (
+            pending is None
+            or pending.target_id != result.target_id
+            or result.mask is None
+            or result.status is TrackingStatus.LOST
+        ):
+            return None
+        old_id = self.active.target_id if self.active else None
+        self.active = TargetSnapshot(
+            target_id=result.target_id,
+            prompt=pending.prompt,
+            box=result.box,
+            mask=result.mask,
+            confidence=result.confidence,
+            status=result.status,
+            frame_id=result.frame_id,
         )
-        self.fsm.on_tracking_started()
+        self.pending = None
+        self.message = f"Tracking {self.active.prompt}"
+        return old_id
 
-    def on_tracker_step(self, confidence: float, box: tuple[float, float, float, float]) -> None:
-        # called on each fast tracker frame to keep position current
-        self.fsm.on_tracker_frame(confidence)
-        if self.current_target is not None:
-            self.current_target.confidence = confidence
-            self.current_target.box = box
-            self.current_target.last_updated = time.perf_counter()
+    def observe(self, results: tuple[TrackingResult, ...] | list[TrackingResult]) -> None:
+        if self.active is None:
+            return
+        result = next((item for item in results if item.target_id == self.active.target_id), None)
+        if result is None:
+            return
+        self.active = TargetSnapshot(
+            target_id=result.target_id,
+            prompt=self.active.prompt,
+            box=result.box,
+            mask=result.mask,
+            confidence=result.confidence,
+            status=result.status,
+            frame_id=result.frame_id,
+        )
+        self.message = "Target lost" if result.status is TrackingStatus.LOST else f"Tracking {self.active.prompt}"
 
-    def reset(self) -> None:
-        # drops active track and sets fsm back to IDLE
-        self.fsm.reset()
-        self.current_target = None
-        self._last_grounding_time = 0.0
+    def set_effect(self, effect: EffectSpec) -> bool:
+        if self.active is None:
+            self.message = "Select a target before applying an effect"
+            return False
+        self.effect = effect
+        self.message = f"Effect: {effect.mode.value}"
+        return True
+
+    def stop(self) -> tuple[int, ...]:
+        removed = tuple(
+            target_id for target_id in (
+                self.active.target_id if self.active else None,
+                self.pending.target_id if self.pending else None,
+            ) if target_id is not None
+        )
+        self.active = None
+        self.pending = None
+        self.effect = EffectSpec(EffectMode.NONE)
+        self.message = "Tracking stopped"
+        return removed
+
+    def _select(self, candidate: GroundingCandidate) -> GroundingCandidate:
+        assert self.pending is not None
+        self.pending.selected = candidate
+        if self.pending.target_id is None:
+            self.pending.target_id = self._next_target_id
+            self._next_target_id += 1
+        self.message = f"Candidate selected: {candidate.label}"
+        return candidate
