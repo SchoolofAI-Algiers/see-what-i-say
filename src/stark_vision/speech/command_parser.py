@@ -27,6 +27,7 @@ _COLORS_RGB = {
     "black": (0, 0, 0),
 }
 _NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+_PRONOUNS = {"him", "her", "it", "them", "the target"}
 _PREFIX = re.compile(r"^(?:stark\s*[,.:]?\s*)", re.IGNORECASE)
 
 
@@ -68,13 +69,17 @@ class CommandParser:
             return CommandEvent(CommandType.SET_EFFECT, original, effect=effect)
 
         selection = re.fullmatch(
-            r"(?:please\s+)?(?:segment|select|track|follow)\s+(.+)", text
+            r"(?:please\s+)?(segment|select|track|follow)\s+(.+)", text
         )
         if selection:
-            prompt = selection.group(1).strip(" .!?\t")
-            if prompt.startswith(("the ", "a ", "an ")):
-                prompt = prompt
-            elif prompt:
+            verb = selection.group(1)
+            prompt = selection.group(2).strip(" .!?\t")
+
+            # "follow her" / "track him" -> keep the current target, no new grounding
+            if verb in ("follow", "track") and prompt in _PRONOUNS:
+                return CommandEvent(CommandType.FOLLOW, original)
+
+            if prompt and not prompt.startswith(("the ", "a ", "an ")):
                 prompt = "the " + prompt
             if prompt:
                 return CommandEvent(CommandType.SELECT_TARGET, original, prompt=prompt)

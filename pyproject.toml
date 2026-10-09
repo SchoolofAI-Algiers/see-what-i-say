@@ -1,0 +1,14 @@
+[project]
+name = "see-what-i-say"
+version = "0.1.0"
+description = "See What I Say"
+requires-python = ">=3.11"
+dependencies = [
+    "ffmpeg>=1.4",
+    "keyboard>=0.13.5",
+    "numpy>=2.4.6",
+    "openai-whisper>=20250625",
+    "opencv-python>=5.0.0.93",
+    "scipy>=1.17.1",
+    "sounddevice>=0.5.6",
+]
