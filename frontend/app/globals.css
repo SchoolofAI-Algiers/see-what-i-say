@@ -1,0 +1,117 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --stark-cyan: #00f5ff;
+  --stark-gold: #ffbf00;
+  --stark-crimson: #ff2e2e;
+  --stark-plasma: #1e90ff;
+  --stark-obsidian: #05080e;
+}
+
+body {
+  background-color: #05080e;
+  color: #f8fafc;
+  overflow: hidden;
+  user-select: none;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+h1, h2, h3, h4, .font-orbitron {
+  font-family: 'Orbitron', sans-serif !important;
+}
+
+/* Glassmorphism & Stark Nanotech Panels */
+.hud-glass-stark {
+  background: rgba(7, 12, 22, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(0, 245, 255, 0.45);
+  box-shadow: 0 0 25px rgba(0, 245, 255, 0.18), inset 0 0 15px rgba(0, 245, 255, 0.08);
+}
+
+.hud-glass-gold {
+  background: rgba(18, 14, 6, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(255, 191, 0, 0.55);
+  box-shadow: 0 0 25px rgba(255, 191, 0, 0.22), inset 0 0 15px rgba(255, 191, 0, 0.1);
+}
+
+/* High-Intensity Text & Drop-Shadow Glows */
+.text-glow-cyan {
+  text-shadow: 0 0 8px #00f5ff, 0 0 20px rgba(0, 245, 255, 0.7);
+}
+
+.text-glow-gold {
+  text-shadow: 0 0 8px #ffbf00, 0 0 20px rgba(255, 191, 0, 0.7);
+}
+
+.text-glow-crimson {
+  text-shadow: 0 0 8px #ff2e2e, 0 0 20px rgba(255, 46, 46, 0.7);
+}
+
+.glow-cyan-box {
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.5), inset 0 0 10px rgba(0, 245, 255, 0.2);
+}
+
+.glow-gold-box {
+  box-shadow: 0 0 20px rgba(255, 191, 0, 0.5), inset 0 0 10px rgba(255, 191, 0, 0.2);
+}
+
+/* Stark Visor Chamfers */
+.clip-chamfer-tl {
+  clip-path: polygon(16px 0%, 100% 0%, 100% 100%, 0% 100%, 0% 16px);
+}
+
+.clip-chamfer-tr {
+  clip-path: polygon(0% 0%, calc(100% - 16px) 0%, 100% 16px, 100% 100%, 0% 100%);
+}
+
+.clip-chamfer-dock {
+  clip-path: polygon(
+    24px 0%,
+    calc(100% - 24px) 0%,
+    100% 24px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    12px 100%,
+    0% calc(100% - 12px),
+    0% 24px
+  );
+}
+
+/* Subtle CRT Scanline overlay */
+.scanlines {
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.28) 50%
+  ),
+  linear-gradient(
+    90deg,
+    rgba(255, 0, 0, 0.04),
+    rgba(0, 255, 0, 0.02),
+    rgba(0, 0, 255, 0.04)
+  );
+  background-size: 100% 3px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(7, 11, 18, 0.8);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 255, 0.4);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 255, 0.8);
+}
