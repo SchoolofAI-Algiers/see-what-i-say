@@ -6,13 +6,13 @@ Quick reference for the four core grounding upgrades and how to explain them to 
 
 Replaces the hardcoded 0.25 cutoff with dynamic scoring:
 - `query complexity`: long descriptive queries distribute cross-attention scores across multiple words, resulting in lower peak probabilities. The threshold scales down dynamically from 0.28 to 0.20 based on word count and modifiers.
-- `relative score falloff`: keeps candidates that fall within 65% of the top detection score, cutting off long-tail background noise.
+- `relative score falloff`: keeps candidates that fall within 55% of the top detection score, cutting off long-tail background noise.
 - File: `src/stark_vision/grounding/adaptive_threshold.py`
 
 ## 2. Temporal Smoothing Filter
 
 Removes coordinate jitter before feeding the bounding box to SAM 2:
-- `centroid`: filtered via 1-Euro adaptive filter (`fc=1.0 Hz`, `beta=0.007`). Stays rock solid when stationary and tracks smoothly without latency when the target moves.
+- `centroid`: filtered via 1-Euro adaptive filter (`fc=1.0 Hz`, `beta=0.02`). Stays rock solid when stationary and tracks smoothly without latency when the target moves.
 - `dimensions`: box width and height are smoothed in log space to avoid aspect ratio popping under zoom.
 - File: `src/stark_vision/grounding/temporal_filter.py`
 

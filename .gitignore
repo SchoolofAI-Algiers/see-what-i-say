@@ -61,6 +61,11 @@ tests/data/sample_frames/*.png
 docs/*chat_history*
 docs/hamza_*
 
+# SAM 2 streaming buffer written by sam2_wrapper.py
+sam2_stream_buffer*/
+*.mp4
+
+
 # Frontend artifacts
 frontend/node_modules/
 frontend/.next/

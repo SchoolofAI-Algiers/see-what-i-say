@@ -244,11 +244,7 @@ def main() -> None:
     args = parser.parse_args()
 
     logger.info("Initializing STARK VISION Grounder on model: %s...", args.model)
-    grounder = Grounder(
-        model_id=args.model,
-        box_threshold=args.box_threshold,
-        text_threshold=args.text_threshold,
-    )
+    grounder = Grounder(model_id=args.model)
 
     run_on_webcam(
         grounder=grounder,

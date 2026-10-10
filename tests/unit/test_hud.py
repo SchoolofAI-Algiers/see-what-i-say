@@ -13,7 +13,7 @@ import time
 import numpy as np
 import pytest
 
-from stark_vision.grounding.grounder import GroundingCandidate
+from stark_vision.contracts import GroundingCandidate
 from stark_vision.hud.overlay import (
     ARC_CYAN,
     OBSIDIAN_GLASS,

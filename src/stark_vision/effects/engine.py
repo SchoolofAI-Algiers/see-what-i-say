@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import cv2
 import numpy as np
 
 from stark_vision.contracts import EffectMode, EffectSpec
@@ -28,10 +29,20 @@ class EffectEngine:
             tint = np.array([255, 205, 35], dtype=np.float32)
             output[mask] = np.clip(frame[mask].astype(np.float32) * 0.55 + tint * 0.45, 0, 255).astype(np.uint8)
             edge = _mask_edge(mask)
+            thickness = max(1, round(min(frame.shape[:2]) / 360))  # ~3 px on 1080p
+            if thickness > 1:
+                kernel = np.ones((thickness, thickness), np.uint8)
+                edge = cv2.dilate(edge.astype(np.uint8), kernel).astype(bool)
             output[edge] = (0, 245, 255)
         elif effect.mode is EffectMode.BLUR:
-            blurred = _box_blur(frame, radius=4)
-            output[mask] = blurred[mask]
+            # Radius scales with resolution so the blur is visible on 1080p, not just on small frames.
+            radius = max(4, round(min(frame.shape[:2]) * 0.025))
+            ys, xs = np.nonzero(mask)
+            y1, y2 = max(0, ys.min() - radius), min(frame.shape[0], ys.max() + radius + 1)
+            x1, x2 = max(0, xs.min() - radius), min(frame.shape[1], xs.max() + radius + 1)
+            blurred = _box_blur(frame[y1:y2, x1:x2], radius=radius)  # only the target region
+            region = mask[y1:y2, x1:x2]
+            output[y1:y2, x1:x2][region] = blurred[region]
         return output
 
 

@@ -1,44 +1,31 @@
-from recorder import AudioRecorder 
-import whisper
-import numpy as np
-from scipy.io.wavfile import write
-from scipy.signal import resample_poly
-import warnings
-import keyboard
+"""Local Whisper speech recognition implementing the SpeechRecognizer protocol."""
 
-warnings.filterwarnings("ignore")
+from __future__ import annotations
+
+import numpy as np
+from scipy.signal import resample_poly
+
+from stark_vision.contracts import AudioBuffer, Transcript
+
+WHISPER_RATE_HZ = 16_000
+
 
 class SpeechToText:
-    def __init__(self):
-        self.model = whisper.load_model("small.en")
+    def __init__(self, model_name: str = "small.en", language: str = "en") -> None:
+        import whisper  # lazy: heavy import
 
-    def transcription(self,audio):
-        audio_16k = resample_poly(audio, 1, 3).astype(np.float32)
+        self.language = language
+        self.model = whisper.load_model(model_name)
 
-        result = self.model.transcribe(audio_16k, language="en",temperature=0)
-        return result["text"]
+    def transcribe(self, audio: AudioBuffer) -> Transcript:
+        samples = audio.samples
+        if samples.size == 0:
+            return Transcript("", self.language)
+        if audio.sample_rate_hz != WHISPER_RATE_HZ:
+            from math import gcd
 
-
-def recording_fnct():
-    print("Press P to start recording")
-    keyboard.wait('p')
-    recorder.start()
-    print("start recording...")
-    
-    print("Press P to stop recording")
-    keyboard.wait('p')
-    recorder.stop()
-    print("stop recording.")
-    return recorder.merged_chunks
-
-
-recorder = AudioRecorder()
-# recording_fnct()
-# record = recorder.merged_chunks
-# write("test.wav", 48000, record)
-# stt = SpeechToText()
-# transcripted_speech = stt.transcription(record)
-
-
-
-
+            g = gcd(WHISPER_RATE_HZ, audio.sample_rate_hz)
+            samples = resample_poly(samples, WHISPER_RATE_HZ // g, audio.sample_rate_hz // g)
+        samples = samples.astype(np.float32)
+        result = self.model.transcribe(samples, language=self.language, temperature=0, fp16=False)
+        return Transcript(result["text"].strip(), self.language)

@@ -36,6 +36,7 @@ class CameraCapture:
         avg_fps = self.nb_frames / elapsed_time
         print ("avg FPS = ", avg_fps )
 
-camera = CameraCapture()
-camera.capture()
+if __name__ == "__main__":
+    camera = CameraCapture()
+    camera.capture()
 

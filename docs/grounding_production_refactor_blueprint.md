@@ -39,12 +39,12 @@ The vision loop runs camera capture on a background thread so the video feed nev
 ### 1. Dynamic Adaptive Thresholding (`adaptive_threshold.py`)
 Computes cutoffs dynamically based on query length and relative score distribution:
 - Base threshold lowers from 0.28 down to 0.20 as token count and descriptive modifiers increase.
-- Relative falloff filter: drops any candidate whose score is below 65% of the top candidate's confidence (`score < 0.65 * top_score`).
+- Relative falloff filter: drops any candidate whose score is below 55% of the top candidate's confidence (`score < 0.55 * top_score`).
 - Keeps the floor at 0.20 to reject background clutter.
 
 ### 2. 1-Euro Centroid Smoothing (`temporal_filter.py`)
 Applies adaptive low-pass filtering to bounding box coordinates:
-- Centroid `(cx, cy)` runs through a 1-Euro filter: minimum cutoff frequency `fc = 1.0 Hz` suppresses stationary hand jitter, while speed coefficient `beta = 0.007` eliminates lag during rapid movement.
+- Centroid `(cx, cy)` runs through a 1-Euro filter: minimum cutoff frequency `fc = 1.0 Hz` suppresses stationary hand jitter, while speed coefficient `beta = 0.02` eliminates lag during rapid movement.
 - Width and height are smoothed in log-space (`ln w`, `ln h`) to prevent box distortion when the camera zooms.
 
 ### 3. Spatial Disambiguation (`disambiguation.py`)

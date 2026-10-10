@@ -148,6 +148,7 @@ class CommandType(str, Enum):
     SELECT_TARGET = "select_target"
     SET_EFFECT = "set_effect"
     RESOLVE_CANDIDATE = "resolve_candidate"
+    FOLLOW = "follow"
     STOP_TRACKING = "stop_tracking"
     UNKNOWN = "unknown"
 
