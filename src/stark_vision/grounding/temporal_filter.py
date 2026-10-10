@@ -152,8 +152,14 @@ class BoxTemporalFilter:
         cy_old = (self._last_filtered_box[1] + self._last_filtered_box[3]) / 2.0
         center_dist = math.hypot(cx_new - cx_old, cy_new - cy_old)
 
-        # Trigger reset if box jumped to completely different target
-        return (iou < self.cut_iou_threshold and center_dist > self.cut_center_dist_threshold)
+        # Jump is measured relative to the previous box diagonal so the threshold
+        # is resolution-independent (the old code compared pixels to 0.35).
+        diag = math.hypot(
+            self._last_filtered_box[2] - self._last_filtered_box[0],
+            self._last_filtered_box[3] - self._last_filtered_box[1],
+        )
+        rel_jump = center_dist / max(1e-4, diag)
+        return iou < self.cut_iou_threshold and rel_jump > self.cut_center_dist_threshold
 
     def filter_box(
         self,
