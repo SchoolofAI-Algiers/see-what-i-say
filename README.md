@@ -141,3 +141,18 @@ The interface of this project
 - [SAM 2](https://github.com/facebookresearch/sam2) — promptable image/video segmentation
 - [Whisper](https://github.com/openai/whisper) — local speech recognition
 - [UniPixel](https://github.com/PolyU-ChenLab/UniPixel) — future-extension reference (unified referring + reasoning)
+
+
+## Running
+some scripts that are needed
+```powershell
+uv sync --extra vision --extra speech --extra api
+$env:SAM2_BUILD_CUDA = "0"; uv pip install --no-build-isolation -e ..\sam2   # SAM 2 (not in the lock)
+uv run python scripts/download_models.py          # SAM 2 checkpoint + DINO + Whisper, once
+uv run python -m stark_vision.main --no-speech     # type commands with T
+uv run python -m stark_vision.main                 # push-to-talk with SPACE
+uv run python scripts/run_on_video.py in.mp4 out.mp4 --command "segment the person in red"
+```
+
+Keys: SPACE talk, T type, M manual box, 1-4 effects, R/C reset, ESC quit. `uv sync` removes SAM 2;
+use `uv sync --inexact` or reinstall it. Tests: `uv run pytest tests -q`.
