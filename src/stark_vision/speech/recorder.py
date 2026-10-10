@@ -16,10 +16,13 @@ class AudioRecorder:
         self._chunks: list[np.ndarray] = []
         self._lock = threading.Lock()
         self._stream = None
+        self.level = 0.0  # RMS of the latest audio chunk (for a live meter)
 
     def _callback(self, indata, frames, time_info, status) -> None:
+        chunk = indata[:, 0].copy()
+        self.level = float(np.sqrt(np.mean(chunk**2))) if chunk.size else 0.0
         with self._lock:
-            self._chunks.append(indata[:, 0].copy())
+            self._chunks.append(chunk)
 
     @property
     def recording(self) -> bool:
@@ -47,7 +50,14 @@ class AudioRecorder:
         self._stream.stop()
         self._stream.close()
         self._stream = None
+        self.level = 0.0
         with self._lock:
             chunks, self._chunks = self._chunks, []
         samples = np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
         return AudioBuffer(samples.astype(np.float32), self.sample_rate_hz)
+
+
+def list_input_devices() -> list[tuple[int, str]]:
+    import sounddevice as sd
+
+    return [(i, d["name"]) for i, d in enumerate(sd.query_devices()) if d["max_input_channels"] > 0]

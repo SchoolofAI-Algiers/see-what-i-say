@@ -265,7 +265,8 @@ class App:
         self.worker.close()
 
 
-def draw_overlay(app: App, rendered: RenderedFrame, status: str, typing: str | None) -> np.ndarray:
+def draw_overlay(app: App, rendered: RenderedFrame, status: str, typing: str | None,
+                 mic_level: float | None = None, camera_black: bool = False) -> np.ndarray:
     """Annotate the HUD frame (RGB in, BGR out for cv2.imshow)."""
     img = np.ascontiguousarray(rendered.image)
     pending = app.manager.pending
@@ -281,23 +282,82 @@ def draw_overlay(app: App, rendered: RenderedFrame, status: str, typing: str | N
     ]
     for i, text in enumerate(lines):
         cv2.putText(img, text, (10, 28 + 22 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 245, 255), 1, cv2.LINE_AA)
+    y = 28 + 22 * len(lines)
+    if mic_level is not None:  # live input meter while recording
+        cv2.putText(img, "MIC", (10, y + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 80, 80), 1, cv2.LINE_AA)
+        cv2.rectangle(img, (60, y), (260, y + 18), (255, 255, 255), 1)
+        fill = int(min(1.0, mic_level * 12.0) * 198)
+        cv2.rectangle(img, (61, y + 1), (61 + fill, y + 17), (60, 255, 60), -1)
+        y += 28
+    if camera_black:
+        cv2.putText(img, "NO IMAGE FROM CAMERA - wrong camera? run scripts/find_camera.py, then --camera N",
+                    (10, y + 14), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 60, 60), 2, cv2.LINE_AA)
     footer = (f"> {typing}_" if typing is not None
               else "SPACE talk | T type | M manual | 1-4 effects | R reset | ESC quit")
     cv2.putText(img, footer, (10, h - 12), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
     return cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 
 
+def open_camera(index: int, width: int, height: int, backend: str = "auto") -> "cv2.VideoCapture":
+    """Open a camera that actually delivers a bright, reasonably fast image.
+
+    Some Windows drivers return black or ~1 FPS frames for particular backend/resolution settings,
+    so try several combinations and keep the first one that works.
+    """
+    all_backends = {"dshow": cv2.CAP_DSHOW, "msmf": cv2.CAP_MSMF, "any": cv2.CAP_ANY}
+    if backend != "auto":
+        order = [(backend, all_backends[backend])]
+    elif os.name == "nt":
+        order = [("dshow", cv2.CAP_DSHOW), ("msmf", cv2.CAP_MSMF), ("any", cv2.CAP_ANY)]
+    else:
+        order = [("any", cv2.CAP_ANY)]
+
+    fallback: list[tuple[float, float, str, bool]] = []
+    for name, api in order:
+        for set_size in (True, False):
+            cap = cv2.VideoCapture(index, api)
+            if not cap.isOpened():
+                cap.release()
+                continue
+            if set_size:
+                cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+            t0 = time.perf_counter()
+            good, brightest = 0, 0.0
+            for i in range(30):
+                ok, f = cap.read()
+                if ok and f is not None:
+                    good += 1
+                    if i >= 10:  # ignore auto-exposure warm-up frames
+                        brightest = max(brightest, float(f.mean()))
+            fps = good / max(1e-6, time.perf_counter() - t0)
+            logger.info("camera %d backend=%s set_size=%s -> brightness %.0f, %.1f FPS",
+                        index, name, set_size, brightest, fps)
+            if brightest > 3.0 and fps >= 5.0:
+                return cap
+            cap.release()
+            if brightest > 3.0:
+                fallback.append((brightest, fps, name, set_size))
+    if fallback:  # image works but slow: better than nothing
+        _, fps, name, set_size = max(fallback, key=lambda t: t[1])
+        logger.warning("camera is slow (%.1f FPS): low light / driver limit. Using backend=%s", fps, name)
+        cap = cv2.VideoCapture(index, all_backends[name])
+        if set_size:
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        return cap
+    raise RuntimeError(
+        f"Camera {index} gives no usable image with any backend. Check Windows camera privacy, "
+        "close other apps using the camera, try --camera N, or use --video file.mp4"
+    )
+
+
 class Camera:
     """Capture thread: converts BGR->RGB once, stamps ids/timestamps, fills the FrameBuffer."""
 
-    def __init__(self, device: int, width: int, height: int, frames: FrameBuffer) -> None:
-        backend = cv2.CAP_DSHOW if os.name == "nt" else cv2.CAP_ANY
-        self.cap = cv2.VideoCapture(device, backend)
-        if not self.cap.isOpened():
-            raise RuntimeError(f"Cannot open camera {device}")
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
-        self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+    def __init__(self, device: int, width: int, height: int, frames: FrameBuffer,
+                 backend: str = "auto") -> None:
+        self.cap = open_camera(device, width, height, backend)
         self.frames = frames
         self._running = True
         self._next_id = 0
@@ -351,8 +411,13 @@ def run(args: argparse.Namespace) -> None:
 
     frames = FrameBuffer()
     app = App(grounder, tracker, frames=frames)
-    camera = Camera(args.camera, args.width, args.height, frames)
-    cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
+    if args.video:
+        from stark_vision.video import VideoCamera
+
+        camera = VideoCamera(args.video, frames)  # replay a file as the camera
+    else:
+        camera = Camera(args.camera, args.width, args.height, frames, args.backend)
+    cv2.namedWindow(WINDOW, cv2.WINDOW_AUTOSIZE)
 
     status = "ready"
     typing: str | None = None
@@ -385,7 +450,9 @@ def run(args: argparse.Namespace) -> None:
                 status = "transcribing"
             else:
                 status = "ready"
-            cv2.imshow(WINDOW, draw_overlay(app, rendered, status, typing))
+            black = float(frame.image[::8, ::8].mean()) < 3.0
+            level = recorder.level if recorder is not None and recorder.recording else None
+            cv2.imshow(WINDOW, draw_overlay(app, rendered, status, typing, level, black))
             key = cv2.waitKey(1) & 0xFF
             if key == 255:
                 continue
@@ -407,8 +474,12 @@ def run(args: argparse.Namespace) -> None:
             elif key == 32 and recorder is not None and stt is not None:
                 if recorder.recording:
                     audio = recorder.stop()
-                    transcribing.set()
-                    threading.Thread(target=transcribe, args=(audio,), daemon=True).start()
+                    rms = float(np.sqrt(np.mean(audio.samples**2))) if audio.samples.size else 0.0
+                    if rms < 1e-3:
+                        app.manager.message = "Mic heard nothing - check --mic N (run with --list-mics)"
+                    else:
+                        transcribing.set()
+                        threading.Thread(target=transcribe, args=(audio,), daemon=True).start()
                 elif not transcribing.is_set():
                     recorder.start()
             elif key in (ord("t"), ord("T")):
@@ -446,7 +517,17 @@ def main() -> None:
     p.add_argument("--whisper-model", default="small.en")
     p.add_argument("--mic", default=None, help="input device index or name")
     p.add_argument("--no-speech", action="store_true")
+    p.add_argument("--backend", choices=["auto", "dshow", "msmf", "any"], default="auto",
+                   help="camera backend (auto tries several and keeps the first that works)")
+    p.add_argument("--video", default=None, help="use a video file as the camera (no webcam needed)")
+    p.add_argument("--list-mics", action="store_true", help="print input devices and exit")
     args = p.parse_args()
+    if args.list_mics:
+        from stark_vision.speech.recorder import list_input_devices
+
+        for idx, name in list_input_devices():
+            print(f"{idx}: {name}")
+        return
     from stark_vision.utils.logging_setup import setup_logging
 
     setup_logging(log_file="logs/stark_vision.log")
