@@ -1,14 +1,14 @@
 """
-Bounding box math helpers for converting between pixel xyxy, xywh, and normalized [0, 1] space.
+geometry helpers: box math (xyxy / xywh / normalized), mask geometry
+model-space -> camera-space mapping used by the rest of the app
 """
-
 from __future__ import annotations
-
 import math
+import numpy as np
 
 from stark_vision.contracts import BoundingBox
 
-
+"""bounding box math"""
 def _sanitize_val(v: float, default: float = 0.0) -> float:
     if math.isnan(v) or math.isinf(v):
         return default
@@ -160,3 +160,69 @@ def pixel_to_normalized(
     by2 = max(by1 + 1e-4, min(1.0, float(b[3]) / height))
     return BoundingBox(x1=bx1, y1=by1, x2=bx2, y2=by2)
 
+
+"""mask helpers"""
+def _check_mask(mask: np.ndarray) -> None:
+    if mask.dtype != np.bool_ or mask.ndim != 2:
+        raise ValueError("Mask must be a 2D boolean numpy array.")
+
+def mask_area(mask: np.ndarray) -> int:
+    """Number of True pixels in the mask."""
+    _check_mask(mask)
+    return int(np.sum(mask))
+
+def mask_centroid(mask: np.ndarray) -> tuple[float, float] | None:
+    """(center_x, center_y) of the mask, or None if the mask is empty."""
+    _check_mask(mask)
+    y_indices, x_indices = np.where(mask)
+    if len(x_indices) == 0:
+        return None
+    return float(np.mean(x_indices)), float(np.mean(y_indices))
+
+
+def mask_to_bbox(mask: np.ndarray) -> BoundingBox | None:
+    """Tight bounding box around the mask, or None if the mask is empty."""
+    _check_mask(mask)
+    y_indices, x_indices = np.where(mask)
+    if len(x_indices) == 0:
+        return None
+    return BoundingBox(
+        x1=float(np.min(x_indices)),
+        y1=float(np.min(y_indices)),
+        x2=float(np.max(x_indices) + 1),
+        y2=float(np.max(y_indices) + 1),
+    )
+
+
+
+#model space -> camera frame
+def map_letterbox_box_to_frame(
+    box: BoundingBox, frame_size: tuple[int, int], model_size: tuple[int, int]
+) -> BoundingBox:
+    """Map a model-space box back to original camera-frame coordinates.
+
+    Accounts for letterbox padding offsets and the scale factor.
+    frame_size: (frame_width, frame_height)
+    model_size: (model_width, model_height)
+    """
+    frame_w, frame_h = frame_size
+    model_w, model_h = model_size
+    if frame_w <= 0 or frame_h <= 0 or model_w <= 0 or model_h <= 0:
+        raise ValueError("Frame and model dimensions must be positive integers.")
+
+    scale = min(model_w / frame_w, model_h / frame_h)
+    pad_x = (model_w - frame_w * scale) / 2.0
+    pad_y = (model_h - frame_h * scale) / 2.0
+
+    x1 = max(0.0, min(float(frame_w), (box.x1 - pad_x) / scale))
+    y1 = max(0.0, min(float(frame_h), (box.y1 - pad_y) / scale))
+    x2 = max(0.0, min(float(frame_w), (box.x2 - pad_x) / scale))
+    y2 = max(0.0, min(float(frame_h), (box.y2 - pad_y) / scale))
+
+    # A box lying entirely in the padding collapses to zero size after clamping,
+    # which BoundingBox would reject. Keep it a valid 1px box instead.
+    x1 = min(x1, frame_w - 1.0)
+    y1 = min(y1, frame_h - 1.0)
+    x2 = max(x2, x1 + 1.0)
+    y2 = max(y2, y1 + 1.0)
+    return BoundingBox(x1=x1, y1=y1, x2=x2, y2=y2)

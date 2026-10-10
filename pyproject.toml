@@ -1,42 +1,47 @@
-[project]
-name = "see-what-i-say"
-version = "0.1.0"
-description = "STARK VISION: Real-Time Speech-Guided Referring Video Segmentation"
-readme = "README.md"
-authors = [
-    { name = "Hamza HATTAB", email = "hhamzariadh@gmail.com" },
-]
-requires-python = ">=3.11"
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
 
-# Core: enough to run the mock pipeline, parser, effects, HUD and the CPU unit tests.
+[project]
+name = "stark-vision"
+version = "0.1.0"
+description = "STARK VISION: real-time speech-guided referring video segmentation"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
 dependencies = [
-    "numpy>=2.0",
-    "opencv-python>=4.10",
-    "pillow>=10.0",
-    "pyyaml>=6.0.0",
-    "pydantic>=2.10.0",
+    "numpy>=1.24.4,<2",
+    "PyYAML>=6.0,<7",
 ]
 
 [project.optional-dependencies]
+# Keep CPU-only mock and application development lightweight. The `full-demo`
+# extra is intended for Linux x86_64 machines with an NVIDIA GPU.
 speech = [
-    "openai-whisper>=20250625",
-    "sounddevice>=0.5",
-    "scipy>=1.13",
-    "keyboard>=0.13.5",
+    "openai-whisper>=20240930",
+    "scipy>=1.11,<2",
+    "sounddevice>=0.4.6,<1",
 ]
 vision = [
-    "torch>=2.4",
-    "torchvision>=0.19",
-    "transformers>=4.45",
+    "SAM-2>=1.0",
+    "opencv-python>=4.10,<5",
+    "Pillow>=9.4,<13",
+    "torch==2.5.1+cu121",
+    "torchvision==0.20.1+cu121",
+    "huggingface-hub>=0.30,<1",
+    "transformers>=4.51,<5",
 ]
-api = [
-    "fastapi>=0.110",
-    "uvicorn[standard]>=0.29",
+full-demo = [
+    "openai-whisper>=20240930",
+    "scipy>=1.11,<2",
+    "sounddevice>=0.4.6,<1",
+    "SAM-2>=1.0",
+    "opencv-python>=4.10,<5",
+    "Pillow>=9.4,<13",
+    "torch==2.5.1+cu121",
+    "torchvision==0.20.1+cu121",
+    "huggingface-hub>=0.30,<1",
+    "transformers>=4.51,<5",
 ]
-
-[build-system]
-requires = ["setuptools>=68.0.0"]
-build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -46,12 +51,34 @@ where = ["src"]
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0.0",
-    "httpx>=0.27",   # needed by fastapi TestClient in tests/unit/test_server_api.py
-    "ruff>=0.5.0",
+    "pytest>=8.0,<10",
+    "ruff>=0.8,<1",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu121", extra = "full-demo" },
+    { index = "pytorch-cu121", extra = "vision" },
+]
+torchvision = [
+    { index = "pytorch-cu121", extra = "full-demo" },
+    { index = "pytorch-cu121", extra = "vision" },
+]
+sam-2 = { git = "https://github.com/facebookresearch/sam2.git", rev = "2b90b9f5ceec907a1c18123530e92e794ad901a4" }
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
