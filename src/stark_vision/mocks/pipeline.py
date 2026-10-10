@@ -94,6 +94,11 @@ class MockPipeline:
         elif command.type is CommandType.SET_EFFECT:
             if command.effect is not None:
                 self.manager.set_effect(command.effect)
+        elif command.type is CommandType.FOLLOW:
+            if self.manager.active is None:
+                self.manager.message = "No active target to follow"
+            else:
+                self.manager.message = f"Following {self.manager.active.prompt}"
         elif command.type is CommandType.STOP_TRACKING:
             self.tracker.reset()
             self.manager.stop()

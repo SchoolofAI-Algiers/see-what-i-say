@@ -38,7 +38,7 @@ class CommandParser:
         original = transcript
         text = _PREFIX.sub("", transcript.strip().lower()).strip(" .!?\t")
 
-        if re.fullmatch(r"(?:stop tracking|reset|clear target|clear the target)", text):
+        if re.fullmatch(r"(?:stop tracking|reset|clear target|clear the target|clear everything|clear all)", text):
             return CommandEvent(CommandType.STOP_TRACKING, original)
 
         side_match = re.fullmatch(r"(?:choose |select )?(?:the )?one on the (left|right)", text)
