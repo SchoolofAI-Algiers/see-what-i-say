@@ -66,6 +66,15 @@ class BoundingBox:
     def xyxy(self) -> tuple[float, float, float, float]:
         return (self.x1, self.y1, self.x2, self.y2)
 
+    def __getitem__(self, index: int) -> float:
+        return self.xyxy[index]
+
+    def __iter__(self):
+        return iter(self.xyxy)
+
+    def __len__(self) -> int:
+        return 4
+
 
 @dataclass(frozen=True)
 class GroundingCandidate:
@@ -74,8 +83,51 @@ class GroundingCandidate:
     label: str
 
     def __post_init__(self) -> None:
+        if not isinstance(self.box, BoundingBox):
+            b = self.box
+            object.__setattr__(
+                self,
+                "box",
+                BoundingBox(float(b[0]), float(b[1]), float(b[2]), float(b[3])),
+            )
         if not 0.0 <= self.score <= 1.0:
             raise ValueError("candidate score must be in [0, 1]")
+
+    @property
+    def x1(self) -> float:
+        return self.box.x1
+
+    @property
+    def y1(self) -> float:
+        return self.box.y1
+
+    @property
+    def x2(self) -> float:
+        return self.box.x2
+
+    @property
+    def y2(self) -> float:
+        return self.box.y2
+
+    @property
+    def center(self) -> tuple[float, float]:
+        return self.box.center
+
+    @property
+    def xyxy(self) -> tuple[float, float, float, float]:
+        return self.box.xyxy
+
+    @property
+    def width(self) -> float:
+        return max(0.0, self.box.x2 - self.box.x1)
+
+    @property
+    def height(self) -> float:
+        return max(0.0, self.box.y2 - self.box.y1)
+
+    @property
+    def area(self) -> float:
+        return self.width * self.height
 
 
 @dataclass(frozen=True)
