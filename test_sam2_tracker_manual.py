@@ -28,6 +28,7 @@ limitation #6 in sam2_tracker.py's docstring):
     python test_sam2_tracker_manual.py
 """
 import itertools
+import sys
 import threading
 import time
 
@@ -108,11 +109,33 @@ def run():
     worker = _HarnessWorker(tracker)
     worker.start()
 
-    cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    # DirectShow is a Windows-only backend. Let OpenCV select its normal
+    # backend on Linux/macOS (including remote Linux Studio environments).
+    if sys.platform == "win32":
+        cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+    else:
+        cap = cv2.VideoCapture(0)
+
+    if not cap.isOpened():
+        worker.stop()
+        cap.release()
+        raise RuntimeError(
+            "Could not open camera 0. This manual test requires a webcam device "
+            "to be exposed to this process; a remote Studio may not have access "
+            "to your laptop's webcam."
+        )
+
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     for _ in range(10):  # let auto-exposure/white-balance settle
-        cap.read()
+        ret, _ = cap.read()
+        if not ret:
+            worker.stop()
+            cap.release()
+            raise RuntimeError(
+                "Camera 0 opened but did not return frames. Check that the "
+                "camera is connected, permitted, and not in use by another process."
+            )
 
     print("Press 'i' to pause and drag a box around your target (Enter/Space to confirm, "
           "'c' to cancel). Press 'q' to quit.")
@@ -120,6 +143,7 @@ def run():
         while True:
             ret, frame_bgr = cap.read()
             if not ret:
+                print("Camera read failed; stopping the manual test.")
                 break
             frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
             worker.submit(frame_rgb)
