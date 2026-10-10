@@ -325,12 +325,15 @@ class Camera:
 
 def run(args: argparse.Namespace) -> None:
     from stark_vision.grounding.grounder import Grounder
-    from stark_vision.segmentation.sam2_wrapper import SAM2Tracker
+    from stark_vision.segmentation.sam2_wrapper import HoldTracker, SAM2Tracker
 
     logger.info("Loading Grounding DINO (%s)...", args.dino_model)
     grounder = Grounder(model_id=args.dino_model)
     logger.info("Loading SAM 2...")
-    tracker = SAM2Tracker(args.sam_config, args.sam_checkpoint, device=args.device, window_size=args.window)
+    tracker_cls = HoldTracker if args.tracker == "hold" else SAM2Tracker
+    tracker = tracker_cls(args.sam_config, args.sam_checkpoint, device=args.device, window_size=args.window)
+    if args.tracker == "hold":
+        logger.warning("HOLD tracker: the mask will NOT follow the target (wiring test only)")
 
     recorder = stt = None
     if not args.no_speech:
@@ -438,6 +441,8 @@ def main() -> None:
     p.add_argument("--sam-checkpoint", default="checkpoints/sam2.1_hiera_tiny.pt")
     p.add_argument("--window", type=int, default=4, help="SAM 2 propagation window (frames)")
     p.add_argument("--device", default=None)
+    p.add_argument("--tracker", choices=["sam2", "hold"], default="sam2",
+                   help="hold = SAM 2 init only, then a static mask: fast wiring test on CPU")
     p.add_argument("--whisper-model", default="small.en")
     p.add_argument("--mic", default=None, help="input device index or name")
     p.add_argument("--no-speech", action="store_true")

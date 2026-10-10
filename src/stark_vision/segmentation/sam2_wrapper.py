@@ -196,3 +196,17 @@ class SAM2Tracker:
         x2 = max(x1 + 1.0, min(float(w), box.x2))
         y2 = max(y1 + 1.0, min(float(h), box.y2))
         return BoundingBox(x1, y1, x2, y2)
+
+
+class HoldTracker(SAM2Tracker):
+    """SAM 2 for the first mask only; the mask is then held still (no propagation).
+
+    Wiring test for slow machines: exercises camera, mic, Whisper, DINO, SAM 2 init, effects and
+    HUD at full frame rate on a CPU. NOT a real tracker: the mask will not follow the person.
+    """
+
+    def update(self, frame: Frame) -> tuple[TrackingResult, ...]:
+        return tuple(
+            TrackingResult(tid, frame.id, st.box, st.mask, st.confidence, TrackingStatus.TRACKING)
+            for tid, st in self._targets.items()
+        )
