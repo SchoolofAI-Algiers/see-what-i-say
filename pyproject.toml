@@ -1,7 +1,11 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "see-what-i-say"
+name = "stark-vision"
 version = "0.1.0"
-description = "STARK VISION: Real-Time Speech-Guided Referring Video Segmentation"
+description = "STARK VISION: real-time speech-guided referring video segmentation"
 readme = "README.md"
 authors = [
     { name = "Hamza HATTAB", email = "hhamzariadh@gmail.com" },
@@ -53,6 +57,9 @@ dev = [
     "httpx>=0.27",  # fastapi TestClient
     "ruff>=0.16.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

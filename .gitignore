@@ -87,3 +87,9 @@ __pycache__/
 *.egg-info/
 */__pycache__/
 src\stark_vision/speech/__pycache__/
+checkpoints/*.pt
+checkpoints/*.pth
+checkpoints/*.safetensors
+.ruff_cache/
+.coverage
+htmlcov/
