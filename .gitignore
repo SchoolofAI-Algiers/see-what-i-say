@@ -85,6 +85,8 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.egg-info/
+*/__pycache__/
+src\stark_vision/speech/__pycache__/
 checkpoints/*.pt
 checkpoints/*.pth
 checkpoints/*.safetensors

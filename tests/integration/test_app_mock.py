@@ -58,3 +58,17 @@ def test_unknown_and_empty_transcript_messages():
         assert app.manager.message.startswith("Unknown command")
     finally:
         app.close()
+
+
+def test_overlay_draws_mic_meter_and_camera_warning():
+    from stark_vision.main import draw_overlay
+
+    frames = make_scene_frames(2)
+    app = App(MockGrounder(()), MockTracker())
+    try:
+        rendered = app.on_frame(frames[0])
+        plain = draw_overlay(app, rendered, "ready", None)
+        loud = draw_overlay(app, rendered, "RECORDING", None, mic_level=0.2, camera_black=True)
+        assert plain.shape == loud.shape and (plain != loud).any()
+    finally:
+        app.close()
